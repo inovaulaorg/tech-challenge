@@ -15,6 +15,11 @@ services:
     networks:
       - tech-challenge-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d tech_challenge_blog"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   backend:
     build:
@@ -43,6 +48,12 @@ services:
     networks:
       - tech-challenge-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
 
   frontend:
     build:
@@ -61,6 +72,11 @@ services:
     networks:
       - tech-challenge-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 volumes:
   postgres_data:
