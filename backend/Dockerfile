@@ -15,6 +15,22 @@ COPY src ./src
 # Build da aplicação
 RUN npm run build
 
+# Ambiente de desenvolvimento
+FROM node:18-alpine AS development
+
+WORKDIR /app
+
+COPY package*.json ./
+COPY tsconfig.json ./
+
+RUN npm ci
+
+COPY src ./src
+
+ENV NODE_ENV=development
+
+CMD ["npm", "run", "dev"]
+
 # Stage de produção
 FROM node:18-alpine AS production
 
