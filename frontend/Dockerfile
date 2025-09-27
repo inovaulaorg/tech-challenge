@@ -5,6 +5,8 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
+# Copia o .env do frontend para o build do React
+COPY .env ./
 RUN npm run build
 
 # Production stage

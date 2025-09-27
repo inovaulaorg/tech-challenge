@@ -30,6 +30,7 @@ export const authenticateToken = async (
       id: decoded.id,
       email: decoded.email,
       username: decoded.username,
+      role: user.role,
     };
     
     next();
@@ -61,6 +62,7 @@ export const optionalAuth = async (
         id: decoded.id,
         email: decoded.email,
         username: decoded.username,
+        role: user.role,
       };
     }
   } catch (error) {

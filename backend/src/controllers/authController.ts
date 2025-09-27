@@ -5,6 +5,7 @@ import {
   AuthenticatedRequest,
   CreateUserRequest,
   LoginRequest,
+  UserRole,
 } from "../types";
 import { generateToken } from "../utils/jwt";
 
@@ -16,7 +17,10 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       password,
       firstName,
       lastName,
+      role: requestedRole,
     }: CreateUserRequest = req.body;
+
+    const role: UserRole = requestedRole === "admin" ? "admin" : "user";
 
     // Check if user already exists
     const existingUser = await User.findOne({
@@ -39,6 +43,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       password,
       firstName,
       lastName,
+      role,
     });
 
     // Generate token
@@ -46,6 +51,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       id: user.id,
       email: user.email,
       username: user.username,
+      role: user.role,
     });
 
     res.status(201).json({
@@ -86,6 +92,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       id: user.id,
       email: user.email,
       username: user.username,
+      role: user.role,
     });
 
     res.status(200).json({

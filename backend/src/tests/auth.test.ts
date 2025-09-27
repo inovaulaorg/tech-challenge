@@ -22,6 +22,7 @@ describe('Auth Controller', () => {
       expect(user.email).toBe(userData.email);
       expect(user.firstName).toBe(userData.firstName);
       expect(user.lastName).toBe(userData.lastName);
+      expect(user.role).toBe('user');
       expect(user.password).not.toBe(userData.password); // Should be hashed
     });
 
@@ -62,6 +63,7 @@ describe('Auth Controller', () => {
         id: 1,
         email: 'test@example.com',
         username: 'testuser',
+        role: 'user',
       };
 
       const token = generateToken(payload);
@@ -75,6 +77,7 @@ describe('Auth Controller', () => {
         id: 1,
         email: 'test@example.com',
         username: 'testuser',
+        role: 'user',
       };
 
       const token = generateToken(payload);

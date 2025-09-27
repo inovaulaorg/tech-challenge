@@ -1,3 +1,5 @@
+export type UserRole = 'user' | 'admin';
+
 export interface User {
   id: number;
   username: string;
@@ -7,6 +9,7 @@ export interface User {
   avatar?: string;
   isActive: boolean;
   lastLogin?: string;
+  role: UserRole;
   createdAt: string;
   updatedAt: string;
 }

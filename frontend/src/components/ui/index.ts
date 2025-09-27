@@ -1,27 +1,33 @@
 import styled, { css } from 'styled-components';
-import { 
-  space, 
-  color, 
-  layout, 
-  flexbox, 
-  typography, 
+import {
+  space,
+  color,
+  layout,
+  flexbox,
+  typography,
   border,
-  SpaceProps, 
-  ColorProps, 
-  LayoutProps, 
+  shadow,
+  SpaceProps,
+  ColorProps,
+  LayoutProps,
   FlexboxProps,
   TypographyProps,
-  BorderProps
+  BorderProps,
+  ShadowProps
 } from 'styled-system';
 
-interface BoxProps extends 
-  SpaceProps, 
-  ColorProps, 
-  LayoutProps, 
+interface BoxProps extends
+  SpaceProps,
+  ColorProps,
+  LayoutProps,
   FlexboxProps,
   TypographyProps,
-  BorderProps {
+  BorderProps,
+  ShadowProps {
   as?: keyof JSX.IntrinsicElements;
+  gap?: string | number;
+  rowGap?: string | number;
+  columnGap?: string | number;
 }
 
 export const Box = styled.div<BoxProps>`
@@ -31,6 +37,7 @@ export const Box = styled.div<BoxProps>`
   ${flexbox}
   ${typography}
   ${border}
+  ${shadow}
 `;
 
 export const Flex = styled(Box)`
@@ -42,20 +49,20 @@ export const Container = styled(Box)`
   margin: 0 auto;
   padding-left: ${({ theme }) => theme.space[4]};
   padding-right: ${({ theme }) => theme.space[4]};
-  
-  @media (min-width: ${({ theme }) => theme.breakpoints.sm}) {
+
+  @media (min-width: ${({ theme }) => theme.breakpoints[0]}) {
     max-width: ${({ theme }) => theme.sizes.container.sm};
   }
-  
-  @media (min-width: ${({ theme }) => theme.breakpoints.md}) {
+
+  @media (min-width: ${({ theme }) => theme.breakpoints[1]}) {
     max-width: ${({ theme }) => theme.sizes.container.md};
   }
-  
-  @media (min-width: ${({ theme }) => theme.breakpoints.lg}) {
+
+  @media (min-width: ${({ theme }) => theme.breakpoints[2]}) {
     max-width: ${({ theme }) => theme.sizes.container.lg};
   }
-  
-  @media (min-width: ${({ theme }) => theme.breakpoints.xl}) {
+
+  @media (min-width: ${({ theme }) => theme.breakpoints[3]}) {
     max-width: ${({ theme }) => theme.sizes.container.xl};
   }
 `;
@@ -73,7 +80,7 @@ export const Text = styled.span<TextProps>`
   ${typography}
   ${color}
   ${space}
-  
+
   ${({ variant, theme }) => {
     switch (variant) {
       case 'heading':
@@ -103,7 +110,7 @@ export const Text = styled.span<TextProps>`
 
 export const Heading = styled(Text).attrs({ as: 'h2', variant: 'heading' })``;
 
-interface ButtonProps {
+interface ButtonProps extends LayoutProps, SpaceProps {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
@@ -119,12 +126,14 @@ export const Button = styled.button<ButtonProps>`
   font-weight: ${({ theme }) => theme.fontWeights.medium};
   transition: all 0.2s ease-in-out;
   cursor: pointer;
-  
+  ${space}
+  ${layout}
+
   &:disabled {
     cursor: not-allowed;
     opacity: 0.6;
   }
-  
+
   ${({ size, theme }) => {
     switch (size) {
       case 'sm':
@@ -144,14 +153,14 @@ export const Button = styled.button<ButtonProps>`
         `;
     }
   }}
-  
+
   ${({ variant, theme }) => {
     switch (variant) {
       case 'secondary':
         return css`
           background-color: ${theme.colors.gray[200]};
           color: ${theme.colors.gray[800]};
-          
+
           &:hover:not(:disabled) {
             background-color: ${theme.colors.gray[300]};
           }
@@ -161,7 +170,7 @@ export const Button = styled.button<ButtonProps>`
           background-color: transparent;
           border-color: ${theme.colors.primary[500]};
           color: ${theme.colors.primary[500]};
-          
+
           &:hover:not(:disabled) {
             background-color: ${theme.colors.primary[500]};
             color: white;
@@ -171,7 +180,7 @@ export const Button = styled.button<ButtonProps>`
         return css`
           background-color: transparent;
           color: ${theme.colors.primary[500]};
-          
+
           &:hover:not(:disabled) {
             background-color: ${theme.colors.primary[50]};
           }
@@ -180,15 +189,15 @@ export const Button = styled.button<ButtonProps>`
         return css`
           background-color: ${theme.colors.primary[500]};
           color: white;
-          
+
           &:hover:not(:disabled) {
             background-color: ${theme.colors.primary[600]};
           }
         `;
     }
   }}
-  
-  ${({ isLoading }) => 
+
+  ${({ isLoading }) =>
     isLoading && css`
       pointer-events: none;
       opacity: 0.6;

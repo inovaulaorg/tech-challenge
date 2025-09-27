@@ -27,68 +27,44 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const baseClasses = clsx(
-      // Base styles
       'inline-flex items-center justify-center font-medium rounded-lg',
       'border border-transparent',
       'focus:outline-none focus:ring-2 focus:ring-offset-2',
       'transition-all duration-200 ease-in-out',
       'disabled:opacity-60 disabled:cursor-not-allowed',
-      
-      // Prevent layout shift during loading
       'relative',
       
       // Size variants
-      {
-        'px-2.5 py-1.5 text-xs': size === 'xs',
-        'px-3 py-2 text-sm': size === 'sm',
-        'px-4 py-2 text-sm': size === 'md',
-        'px-4 py-2 text-base': size === 'lg',
-        'px-6 py-3 text-lg': size === 'xl',
-      },
+      size === 'xs' && 'px-2.5 py-1.5 text-xs',
+      size === 'sm' && 'px-3 py-2 text-sm',
+      size === 'md' && 'px-4 py-2 text-sm',
+      size === 'lg' && 'px-4 py-2 text-base',
+      size === 'xl' && 'px-6 py-3 text-lg',
       
-      // Color variants with proper hover states
-      {
-        // Primary - Blue theme
-        'bg-primary-600 text-white shadow-sm': variant === 'primary',
-        'hover:bg-primary-700 hover:shadow-md': variant === 'primary' && !disabled && !isLoading,
-        'focus:ring-primary-500': variant === 'primary',
-        'active:bg-primary-800': variant === 'primary' && !disabled && !isLoading,
-        
-        // Secondary - Gray theme
-        'bg-secondary-100 text-secondary-900 border-secondary-200': variant === 'secondary',
-        'hover:bg-secondary-200 hover:border-secondary-300': variant === 'secondary' && !disabled && !isLoading,
-        'focus:ring-secondary-500': variant === 'secondary',
-        'active:bg-secondary-300': variant === 'secondary' && !disabled && !isLoading,
-        
-        // Outline
-        'bg-transparent text-primary-700 border-primary-300': variant === 'outline',
-        'hover:bg-primary-50 hover:border-primary-400': variant === 'outline' && !disabled && !isLoading,
-        'focus:ring-primary-500': variant === 'outline',
-        'active:bg-primary-100': variant === 'outline' && !disabled && !isLoading,
-        
-        // Ghost
-        'bg-transparent text-secondary-700': variant === 'ghost',
-        'hover:bg-secondary-100 hover:text-secondary-900': variant === 'ghost' && !disabled && !isLoading,
-        'focus:ring-secondary-500': variant === 'ghost',
-        'active:bg-secondary-200': variant === 'ghost' && !disabled && !isLoading,
-        
-        // Danger
-        'bg-error-600 text-white shadow-sm': variant === 'danger',
-        'hover:bg-error-700 hover:shadow-md': variant === 'danger' && !disabled && !isLoading,
-        'focus:ring-error-500': variant === 'danger',
-        'active:bg-error-800': variant === 'danger' && !disabled && !isLoading,
-      },
+      // Color variants with hover/active states
+      variant === 'primary' && [
+        'bg-primary-600 text-white shadow-sm focus:ring-primary-500',
+        !disabled && !isLoading && ['hover:bg-primary-700 hover:shadow-md', 'active:bg-primary-800'],
+      ],
+      variant === 'secondary' && [
+        'bg-secondary-100 text-secondary-900 border-secondary-200 focus:ring-secondary-500',
+        !disabled && !isLoading && ['hover:bg-secondary-200 hover:border-secondary-300', 'active:bg-secondary-300'],
+      ],
+      variant === 'outline' && [
+        'bg-transparent text-primary-700 border-primary-300 focus:ring-primary-500',
+        !disabled && !isLoading && ['hover:bg-primary-50 hover:border-primary-400', 'active:bg-primary-100'],
+      ],
+      variant === 'ghost' && [
+        'bg-transparent text-secondary-700 focus:ring-secondary-500',
+        !disabled && !isLoading && ['hover:bg-secondary-100 hover:text-secondary-900', 'active:bg-secondary-200'],
+      ],
+      variant === 'danger' && [
+        'bg-error-600 text-white shadow-sm focus:ring-error-500',
+        !disabled && !isLoading && ['hover:bg-error-700 hover:shadow-md', 'active:bg-error-800'],
+      ],
       
-      // Full width
-      {
-        'w-full': fullWidth,
-      },
-      
-      // Loading state
-      {
-        'cursor-wait': isLoading,
-      },
-      
+      fullWidth && 'w-full',
+      isLoading && 'cursor-wait',
       className
     );
 

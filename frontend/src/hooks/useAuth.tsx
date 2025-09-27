@@ -19,12 +19,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const ensureRole = (storedUser: any): User => {
+    if (storedUser?.role) {
+      return storedUser as User;
+    }
+
+    const normalizedUser: User = {
+      ...storedUser,
+      role: 'user',
+    };
+
+    setUserData(normalizedUser);
+    return normalizedUser;
+  };
+
   useEffect(() => {
     const initAuth = async () => {
       try {
         const userData = getUserData();
         if (userData) {
-          setUser(userData);
+          const normalized = ensureRole(userData);
+          setUser(normalized);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
@@ -42,8 +57,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await authService.login({ email, password });
       setAuthToken(response.token);
-      setUserData(response.user);
-      setUser(response.user);
+      const normalizedUser = ensureRole(response.user);
+      setUserData(normalizedUser);
+      setUser(normalizedUser);
     } catch (error) {
       throw error;
     } finally {
@@ -56,8 +72,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       const response = await authService.register(userData);
       setAuthToken(response.token);
-      setUserData(response.user);
-      setUser(response.user);
+      const normalizedUser = ensureRole(response.user);
+      setUserData(normalizedUser);
+      setUser(normalizedUser);
     } catch (error) {
       throw error;
     } finally {
@@ -73,8 +90,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const updateProfile = async (userData: Partial<User>) => {
     try {
       const response = await authService.updateProfile(userData);
-      setUserData(response.user);
-      setUser(response.user);
+      const normalizedUser = ensureRole(response.user);
+      setUserData(normalizedUser);
+      setUser(normalizedUser);
     } catch (error) {
       throw error;
     }

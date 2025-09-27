@@ -1,13 +1,14 @@
-import { 
-  DataTypes, 
-  Model, 
-  Optional, 
-  Association, 
+import {
+  DataTypes,
+  Model,
+  Optional,
+  Association,
   HasManyGetAssociationsMixin,
-  HasManyCreateAssociationMixin 
+  HasManyCreateAssociationMixin
 } from 'sequelize';
 import { sequelize } from '../config/database';
 import bcrypt from 'bcryptjs';
+import { UserRole } from '../types';
 
 interface UserAttributes {
   id: number;
@@ -19,11 +20,12 @@ interface UserAttributes {
   avatar?: string;
   isActive: boolean;
   lastLogin?: Date;
+  role: UserRole;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'isActive' | 'createdAt' | 'updatedAt'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'isActive' | 'createdAt' | 'updatedAt' | 'role'> {}
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: number;
@@ -35,6 +37,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public avatar?: string;
   public isActive!: boolean;
   public lastLogin?: Date;
+  public role!: UserRole;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -113,6 +116,11 @@ User.init(
     lastLogin: {
       type: DataTypes.DATE,
       allowNull: true,
+    },
+    role: {
+      type: DataTypes.ENUM('user', 'admin'),
+      allowNull: false,
+      defaultValue: 'user',
     },
   },
   {

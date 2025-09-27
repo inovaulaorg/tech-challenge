@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { Container, Flex, Box, Text, Button } from '../ui';
+import { useTheme } from 'styled-components';
 import { useAuth } from '../../hooks/useAuth';
 
 const HeaderContainer = styled.header`
@@ -19,7 +20,7 @@ const Logo = styled(Link)`
   font-weight: ${({ theme }) => theme.fontWeights.bold};
   color: ${({ theme }) => theme.colors.primary[600]};
   text-decoration: none;
-  
+
   &:hover {
     color: ${({ theme }) => theme.colors.primary[700]};
     text-decoration: none;
@@ -32,7 +33,7 @@ const NavLink = styled(Link)`
   padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[4]};
   border-radius: ${({ theme }) => theme.radii.md};
   transition: all 0.2s ease-in-out;
-  
+
   &:hover {
     background-color: ${({ theme }) => theme.colors.gray[100]};
     color: ${({ theme }) => theme.colors.gray[900]};
@@ -55,7 +56,7 @@ const UserButton = styled.button`
   cursor: pointer;
   border-radius: ${({ theme }) => theme.radii.md};
   transition: background-color 0.2s ease-in-out;
-  
+
   &:hover {
     background-color: ${({ theme }) => theme.colors.gray[100]};
   }
@@ -76,6 +77,7 @@ const Avatar = styled.div`
 
 export const Header: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
+  const theme = useTheme();
 
   const handleLogout = () => {
     logout();
@@ -84,18 +86,19 @@ export const Header: React.FC = () => {
   return (
     <HeaderContainer>
       <Container>
-        <Flex 
-          alignItems="center" 
-          justifyContent="space-between" 
-          py={4}
+        <Flex
+          style={{
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingTop: theme.space[4],
+            paddingBottom: theme.space[4],
+          }}
         >
           <Logo to="/">
             TechBlog
           </Logo>
-          
-          <Flex alignItems="center" gap={4}>
+          <Flex style={{ alignItems: 'center', gap: theme.space[4] }}>
             <NavLink to="/">Posts</NavLink>
-            
             {isAuthenticated ? (
               <>
                 <NavLink to="/create">Write</NavLink>
@@ -104,7 +107,7 @@ export const Header: React.FC = () => {
                     <Avatar>
                       {user?.username?.charAt(0)?.toUpperCase() || 'U'}
                     </Avatar>
-                    <Text fontSize="sm" color="gray.600">
+                    <Text as="span" style={{ fontSize: theme.fontSizes.sm, color: theme.colors.gray[600], marginLeft: theme.space[2] }}>
                       {user?.username}
                     </Text>
                   </UserButton>
@@ -126,4 +129,4 @@ export const Header: React.FC = () => {
       </Container>
     </HeaderContainer>
   );
-};
+}

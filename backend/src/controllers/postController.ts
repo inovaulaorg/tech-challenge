@@ -51,7 +51,7 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
         {
           model: User,
           as: 'author',
-          attributes: ['id', 'username', 'avatar'],
+          attributes: ['id', 'username', 'avatar', 'role'],
         },
         // Missing eager loading for comments and likes - will cause N+1 queries
       ],
@@ -100,7 +100,7 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
         {
           model: User,
           as: 'author',
-          attributes: ['id', 'username', 'firstName', 'lastName', 'avatar'],
+          attributes: ['id', 'username', 'firstName', 'lastName', 'avatar', 'role'],
         },
       ],
     });
@@ -161,7 +161,7 @@ export const createPost = async (req: AuthenticatedRequest, res: Response): Prom
         {
           model: User,
           as: 'author',
-          attributes: ['id', 'username', 'avatar'],
+          attributes: ['id', 'username', 'avatar', 'role'],
         },
       ],
     });
@@ -193,7 +193,7 @@ export const updatePost = async (req: AuthenticatedRequest, res: Response): Prom
     }
 
     // Check if user is the author
-    if (post.authorId !== req.user.id) {
+    if (post.authorId !== req.user.id && req.user.role !== 'admin') {
       res.status(403).json({ error: 'Not authorized to update this post' });
       return;
     }
@@ -211,7 +211,7 @@ export const updatePost = async (req: AuthenticatedRequest, res: Response): Prom
         {
           model: User,
           as: 'author',
-          attributes: ['id', 'username', 'avatar'],
+          attributes: ['id', 'username', 'avatar', 'role'],
         },
       ],
     });
@@ -242,7 +242,7 @@ export const deletePost = async (req: AuthenticatedRequest, res: Response): Prom
     }
 
     // Check if user is the author
-    if (post.authorId !== req.user.id) {
+    if (post.authorId !== req.user.id && req.user.role !== 'admin') {
       res.status(403).json({ error: 'Not authorized to delete this post' });
       return;
     }
