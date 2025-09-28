@@ -1,5 +1,7 @@
+import { describe, beforeEach, it, expect } from '@jest/globals';
 import { User } from '../models';
-import { generateToken } from '../utils/jwt';
+import type { JWTPayload } from '../types';
+import { generateToken, verifyToken } from '../utils/jwt';
 
 describe('Auth Controller', () => {
   beforeEach(async () => {
@@ -22,6 +24,7 @@ describe('Auth Controller', () => {
       expect(user.email).toBe(userData.email);
       expect(user.firstName).toBe(userData.firstName);
       expect(user.lastName).toBe(userData.lastName);
+      expect(user.role).toBe('user');
       expect(user.password).not.toBe(userData.password); // Should be hashed
     });
 
@@ -41,27 +44,26 @@ describe('Auth Controller', () => {
       expect(isInvalid).toBe(false);
     });
 
-    // Intentionally broken test
-    it('should fail - broken test example', async () => {
+    it('should enforce unique email and username', async () => {
       const userData = {
         username: 'testuser',
         email: 'test@example.com',
         password: 'password123',
       };
 
-      const user = await User.create(userData);
-      
-      // This test will fail because we're expecting the wrong value
-      expect(user.username).toBe('wrongusername');
+      await User.create(userData);
+
+      await expect(User.create(userData)).rejects.toThrow();
     });
   });
 
   describe('JWT Token', () => {
     it('should generate and verify token correctly', () => {
-      const payload = {
+      const payload: Omit<JWTPayload, 'iat' | 'exp'> = {
         id: 1,
         email: 'test@example.com',
         username: 'testuser',
+        role: 'user',
       };
 
       const token = generateToken(payload);
@@ -69,18 +71,20 @@ describe('Auth Controller', () => {
       expect(typeof token).toBe('string');
     });
 
-    // Intentionally broken test
-    it('should fail - broken JWT test', () => {
-      const payload = {
+    it('should verify token payload correctly', () => {
+      const payload: Omit<JWTPayload, 'iat' | 'exp'> = {
         id: 1,
         email: 'test@example.com',
         username: 'testuser',
+        role: 'user',
       };
 
       const token = generateToken(payload);
-      
-      // This will fail because we're expecting undefined
-      expect(token).toBeUndefined();
+      const decoded = verifyToken(token);
+
+      expect(decoded).toMatchObject(payload);
+      expect(decoded).toHaveProperty('exp');
+      expect(decoded).toHaveProperty('iat');
     });
   });
 });

@@ -15,7 +15,7 @@ export const usePostsAdvanced = (options?: {
 }) => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  
+
   const {
     page = 1,
     limit = 10,
@@ -53,10 +53,9 @@ export const usePostsAdvanced = (options?: {
   const createPostMutation = useMutation(
     (postData: CreatePostRequest) => postService.createPost(postData),
     {
-      onSuccess: (newPost) => {
-        // Invalidate and refetch posts
+      onSuccess: ({ post }) => {
         queryClient.invalidateQueries(['posts']);
-        queryClient.setQueryData(['post', newPost.id], newPost);
+        queryClient.setQueryData(['post', post.id], post);
       },
       onError: (error) => {
         console.error('Error creating post:', error);
@@ -69,9 +68,8 @@ export const usePostsAdvanced = (options?: {
     ({ id, data }: { id: number; data: UpdatePostRequest }) =>
       postService.updatePost(id, data),
     {
-      onSuccess: (updatedPost) => {
-        // Update cache
-        queryClient.setQueryData(['post', updatedPost.id], updatedPost);
+      onSuccess: ({ post }) => {
+        queryClient.setQueryData(['post', post.id], post);
         queryClient.invalidateQueries(['posts']);
       },
       onError: (error) => {
@@ -109,20 +107,26 @@ export const usePostsAdvanced = (options?: {
         const previousPosts = queryClient.getQueryData(queryKey);
 
         // Optimistically update to new value
-        queryClient.setQueryData(['post', postId], (old: any) => ({
-          ...old,
-          isLiked: !old?.isLiked,
-          likeCount: old?.isLiked ? old.likeCount - 1 : old.likeCount + 1,
-        }));
+        queryClient.setQueryData(['post', postId], (old: any) => {
+          const currentCount = old?.likeCount ?? 0;
+
+          return {
+            ...old,
+            isLiked: !old?.isLiked,
+            likeCount: old?.isLiked ? currentCount - 1 : currentCount + 1,
+          };
+        });
 
         queryClient.setQueryData(queryKey, (old: any) => ({
           ...old,
-          posts: old?.posts?.map((post: Post) => 
-            post.id === postId 
+          posts: old?.posts?.map((post: Post) =>
+            post.id === postId
               ? {
                   ...post,
                   isLiked: !post.isLiked,
-                  likeCount: post.isLiked ? post.likeCount - 1 : post.likeCount + 1,
+                  likeCount: post.isLiked
+                    ? (post.likeCount ?? 0) - 1
+                    : (post.likeCount ?? 0) + 1,
                 }
               : post
           ),
@@ -181,7 +185,7 @@ export const usePostsAdvanced = (options?: {
     // Data
     posts: postsData?.posts || [],
     pagination: postsData?.pagination,
-    
+
     // Loading states
     isLoading,
     isFetching,
@@ -189,25 +193,25 @@ export const usePostsAdvanced = (options?: {
     isUpdating: updatePostMutation.isLoading,
     isDeleting: deletePostMutation.isLoading,
     isLiking: likePostMutation.isLoading,
-    
+
     // Error states
     error,
     createError: createPostMutation.error,
     updateError: updatePostMutation.error,
     deleteError: deletePostMutation.error,
     likeError: likePostMutation.error,
-    
+
     // Actions
     createPost,
     updatePost,
     deletePost,
     likePost,
     refetch,
-    
+
     // Utility functions
     canEditPost,
     canDeletePost,
-    
+
     // Reset functions
     resetCreateError: createPostMutation.reset,
     resetUpdateError: updatePostMutation.reset,
@@ -221,7 +225,7 @@ export const usePost = (postId: number, enabled = true) => {
   const queryClient = useQueryClient();
 
   const {
-    data: post,
+    data: postResponse,
     isLoading,
     error,
     refetch
@@ -235,18 +239,26 @@ export const usePost = (postId: number, enabled = true) => {
     }
   );
 
+  const post = postResponse?.post;
+
   // Prefetch related posts
+  const tags = post?.tags;
+
   useEffect(() => {
-    if (post?.tags && post.tags.length > 0) {
-      queryClient.prefetchQuery(
-        ['posts', { tags: post.tags.slice(0, 3) }],
-        () => postService.getPosts({ tags: post.tags.slice(0, 3), limit: 5 }),
-        {
-          staleTime: 10 * 60 * 1000, // 10 minutes
-        }
-      );
+    if (!tags || tags.length === 0) {
+      return;
     }
-  }, [post?.tags, queryClient]);
+
+    const topTags = tags.slice(0, 3);
+
+    queryClient.prefetchQuery(
+      ['posts', { tags: topTags }],
+      () => postService.getPosts({ tags: topTags, limit: 5 }),
+      {
+        staleTime: 10 * 60 * 1000, // 10 minutes
+      }
+    );
+  }, [queryClient, tags]);
 
   return {
     post,
@@ -259,13 +271,13 @@ export const usePost = (postId: number, enabled = true) => {
 // Hook for post drafts
 export const useDrafts = () => {
   const { user } = useAuth();
-  
+
   return useQuery(
     ['posts', 'drafts', user?.id],
-    () => postService.getPosts({ 
-      authorId: user?.id, 
+    () => postService.getPosts({
+      authorId: user?.id,
       published: false,
-      limit: 50 
+      limit: 50
     }),
     {
       enabled: !!user,
@@ -314,7 +326,7 @@ export const usePostSearch = () => {
   });
 
   const addTag = useCallback((tag: string) => {
-    setSelectedTags(prev => [...new Set([...prev, tag])]);
+    setSelectedTags(prev => (prev.includes(tag) ? prev : [...prev, tag]));
   }, []);
 
   const removeTag = useCallback((tag: string) => {

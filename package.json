@@ -18,10 +18,22 @@
     "docker:down": "docker-compose down",
     "docker:build": "docker-compose build"
   },
-  "keywords": ["blog", "nodejs", "react", "typescript", "postgresql", "aws-s3"],
+  "keywords": [
+    "blog",
+    "nodejs",
+    "react",
+    "typescript",
+    "postgresql",
+    "aws-s3"
+  ],
   "author": "Tech Challenge",
   "license": "MIT",
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "@types/styled-system": "^5.1.24",
+    "concurrently": "^8.2.2",
+    "jest": "^30.2.0"
+  },
+  "dependencies": {
+    "styled-system": "^5.1.5"
   }
 }

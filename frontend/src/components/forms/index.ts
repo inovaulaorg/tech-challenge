@@ -13,7 +13,10 @@ export const FormGroup = styled(Box)`
   gap: ${({ theme }) => theme.space[2]};
 `;
 
-export const Label = styled(Text).attrs({ as: 'label', variant: 'label' })`
+export const Label = styled.label`
+  font-size: ${({ theme }) => theme.fontSizes.sm};
+  font-weight: ${({ theme }) => theme.fontWeights.medium};
+  color: ${({ theme }) => theme.colors.gray[700]};
   cursor: pointer;
 `;
 

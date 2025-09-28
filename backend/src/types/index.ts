@@ -1,10 +1,13 @@
 import { Request } from 'express';
 
+export type UserRole = 'user' | 'admin';
+
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: number;
     email: string;
     username: string;
+    role: UserRole;
   };
 }
 
@@ -14,6 +17,7 @@ export interface CreateUserRequest {
   password: string;
   firstName?: string;
   lastName?: string;
+  role?: UserRole;
 }
 
 export interface LoginRequest {
@@ -60,6 +64,7 @@ export interface JWTPayload {
   id: number;
   email: string;
   username: string;
+  role: UserRole;
   iat: number;
   exp: number;
 }

@@ -57,7 +57,7 @@ export const uploadImage = async (req: AuthenticatedRequest, res: Response): Pro
     }
 
     // Upload to S3
-    const result = await uploadToS3(req.file, 'post-images');
+    const result = await uploadToS3(req.file, 'post-images', req.user.id);
 
     res.status(200).json({
       message: 'File uploaded successfully',
@@ -126,7 +126,22 @@ export const deleteImage = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
 
-    await deleteFromS3(key);
+    let normalizedKey: string;
+
+    try {
+      normalizedKey = decodeURIComponent(key);
+    } catch (error) {
+      res.status(400).json({ error: 'Invalid file key' });
+      return;
+    }
+    const allowedPrefix = `post-images/user-${req.user.id}/`;
+
+    if (!normalizedKey.startsWith(allowedPrefix)) {
+      res.status(403).json({ error: 'Not authorized to delete this file' });
+      return;
+    }
+
+    await deleteFromS3(normalizedKey);
 
     res.status(200).json({
       message: 'File deleted successfully',

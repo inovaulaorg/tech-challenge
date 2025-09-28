@@ -3,12 +3,29 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const isTestEnvironment = typeof process.env.JEST_WORKER_ID !== 'undefined' || process.env.NODE_ENV === 'test';
+
 const sequelize = new Sequelize({
-  database: process.env.DB_NAME || 'tech_challenge_blog',
-  username: process.env.DB_USER || 'admin',
-  password: process.env.DB_PASSWORD || 'password123',
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
+  database:
+    (isTestEnvironment
+      ? process.env.DB_NAME_TEST || process.env.DB_NAME
+      : process.env.DB_NAME) || 'tech_challenge_blog',
+  username:
+    (isTestEnvironment
+      ? process.env.DB_USER_TEST || process.env.DB_USER
+      : process.env.DB_USER) || 'admin',
+  password:
+    (isTestEnvironment
+      ? process.env.DB_PASSWORD_TEST || process.env.DB_PASSWORD
+      : process.env.DB_PASSWORD) || 'password123',
+  host:
+    (isTestEnvironment ? process.env.DB_HOST_TEST : process.env.DB_HOST) ||
+    (isTestEnvironment ? 'localhost' : 'localhost'),
+  port: parseInt(
+    (isTestEnvironment
+      ? process.env.DB_PORT_TEST || process.env.DB_PORT
+      : process.env.DB_PORT) || '5432'
+  ),
   dialect: 'postgres',
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
   pool: {

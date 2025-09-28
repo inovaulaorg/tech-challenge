@@ -1,7 +1,17 @@
 import jwt from 'jsonwebtoken';
 import { JWTPayload } from '../types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-fallback-secret-key';
+const resolveJwtSecret = (): string => {
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
+    throw new Error('JWT_SECRET environment variable must be defined');
+  }
+
+  return secret;
+};
+
+const JWT_SECRET = resolveJwtSecret();
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 export const generateToken = (payload: Omit<JWTPayload, 'iat' | 'exp'>): string => {
@@ -19,3 +29,5 @@ export const generateRefreshToken = (payload: Omit<JWTPayload, 'iat' | 'exp'>): 
     expiresIn: '30d',
   } as any);
 };
+
+export { resolveJwtSecret };

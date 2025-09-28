@@ -1,6 +1,6 @@
 import { Response } from 'express';
 import { Op } from 'sequelize';
-import { Post, User, Comment, Like } from '../models';
+import { sequelize, Post, User, Comment, Like } from '../models';
 import { AuthenticatedRequest, CreatePostRequest, UpdatePostRequest, PostQuery } from '../types';
 
 export const getPosts = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -41,39 +41,70 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
       whereClause.authorId = parseInt(authorId);
     }
 
-    // Intentional N+1 query problem: This will cause performance issues
+    const isLikedLiteral = req.user
+      ? sequelize.literal(
+          `EXISTS (SELECT 1 FROM "likes" AS "user_likes" WHERE "user_likes"."postId" = "Post"."id" AND "user_likes"."userId" = ${sequelize.escape(
+            req.user.id,
+          )})`
+        )
+      : sequelize.literal('false');
+
     const posts = await Post.findAndCountAll({
       where: whereClause,
       limit: limitNumber,
       offset,
       order: [[sortBy, sortOrder]],
+      distinct: true,
+      attributes: {
+        include: [
+          [
+            sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM "comments" AS "comments"
+              WHERE "comments"."postId" = "Post"."id"
+            )`),
+            'commentCount',
+          ],
+          [
+            sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM "likes" AS "likes"
+              WHERE "likes"."postId" = "Post"."id"
+            )`),
+            'likeCount',
+          ],
+          [isLikedLiteral, 'isLiked'],
+        ],
+      },
       include: [
         {
           model: User,
           as: 'author',
-          attributes: ['id', 'username', 'avatar'],
+          attributes: ['id', 'username', 'avatar', 'role'],
         },
-        // Missing eager loading for comments and likes - will cause N+1 queries
       ],
     });
 
-    // Intentionally inefficient: Making separate queries for each post
-    const postsWithCounts = await Promise.all(
-      posts.rows.map(async (post) => {
-        const commentCount = await Comment.count({ where: { postId: post.id } });
-        const likeCount = await Like.count({ where: { postId: post.id } });
-        const isLiked = req.user 
-          ? await Like.findOne({ where: { postId: post.id, userId: req.user.id } }) !== null
-          : false;
+    const postsWithCounts = posts.rows.map((post) => {
+      const plain = post.toJSON() as any;
+      const normalizeBoolean = (value: unknown): boolean => {
+        if (typeof value === 'boolean') {
+          return value;
+        }
+        if (value === null || value === undefined) {
+          return false;
+        }
+        const stringValue = value.toString().toLowerCase();
+        return stringValue === 'true' || stringValue === 't' || stringValue === '1';
+      };
 
-        return {
-          ...post.toJSON(),
-          commentCount,
-          likeCount,
-          isLiked,
-        };
-      })
-    );
+      return {
+        ...plain,
+        commentCount: Number(plain.commentCount ?? 0),
+        likeCount: Number(plain.likeCount ?? 0),
+        isLiked: normalizeBoolean(plain.isLiked),
+      };
+    });
 
     res.status(200).json({
       posts: postsWithCounts,
@@ -100,7 +131,27 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
         {
           model: User,
           as: 'author',
-          attributes: ['id', 'username', 'firstName', 'lastName', 'avatar'],
+          attributes: ['id', 'username', 'firstName', 'lastName', 'avatar', 'role'],
+        },
+        {
+          model: Comment,
+          as: 'comments',
+          separate: true,
+          required: false,
+          include: [
+            {
+              model: User,
+              as: 'author',
+              attributes: ['id', 'username', 'avatar', 'role'],
+            },
+          ],
+          order: [['createdAt', 'ASC']],
+        },
+        {
+          model: Like,
+          as: 'likes',
+          separate: true,
+          attributes: ['userId'],
         },
       ],
     });
@@ -114,18 +165,16 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
     post.viewCount += 1;
     await post.save();
 
-    // Intentional N+1 query problem: Get comments with authors inefficiently
-    const commentsWithAuthors = await post.getCommentsWithAuthors();
-    
-    const likeCount = await Like.count({ where: { postId: post.id } });
-    const isLiked = req.user 
-      ? await Like.findOne({ where: { postId: post.id, userId: req.user.id } }) !== null
-      : false;
+    const postJson = post.toJSON() as any;
+    const likes = Array.isArray(postJson.likes) ? postJson.likes : [];
+    const likeCount = likes.length;
+    const isLiked = req.user ? likes.some((like: any) => like.userId === req.user!.id) : false;
+    const { likes: _likes, ...postWithoutLikes } = postJson;
 
     res.status(200).json({
       post: {
-        ...post.toJSON(),
-        comments: commentsWithAuthors,
+        ...postWithoutLikes,
+        comments: Array.isArray(postJson.comments) ? postJson.comments : [],
         likeCount,
         isLiked,
       },
@@ -161,7 +210,7 @@ export const createPost = async (req: AuthenticatedRequest, res: Response): Prom
         {
           model: User,
           as: 'author',
-          attributes: ['id', 'username', 'avatar'],
+          attributes: ['id', 'username', 'avatar', 'role'],
         },
       ],
     });
@@ -193,7 +242,7 @@ export const updatePost = async (req: AuthenticatedRequest, res: Response): Prom
     }
 
     // Check if user is the author
-    if (post.authorId !== req.user.id) {
+    if (post.authorId !== req.user.id && req.user.role !== 'admin') {
       res.status(403).json({ error: 'Not authorized to update this post' });
       return;
     }
@@ -211,7 +260,7 @@ export const updatePost = async (req: AuthenticatedRequest, res: Response): Prom
         {
           model: User,
           as: 'author',
-          attributes: ['id', 'username', 'avatar'],
+          attributes: ['id', 'username', 'avatar', 'role'],
         },
       ],
     });
@@ -242,7 +291,7 @@ export const deletePost = async (req: AuthenticatedRequest, res: Response): Prom
     }
 
     // Check if user is the author
-    if (post.authorId !== req.user.id) {
+    if (post.authorId !== req.user.id && req.user.role !== 'admin') {
       res.status(403).json({ error: 'Not authorized to delete this post' });
       return;
     }

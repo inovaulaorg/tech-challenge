@@ -12,8 +12,9 @@ export interface PostQuery {
   sortBy?: string;
   sortOrder?: 'ASC' | 'DESC';
   search?: string;
-  tags?: string;
+  tags?: string | string[];
   authorId?: number;
+  published?: boolean;
 }
 
 export const postService = {
@@ -21,9 +22,18 @@ export const postService = {
     const params = new URLSearchParams();
     
     Object.entries(query).forEach(([key, value]) => {
-      if (value !== undefined) {
-        params.append(key, value.toString());
+      if (value === undefined || value === null) {
+        return;
       }
+
+      if (Array.isArray(value)) {
+        value.forEach((item) => {
+          params.append(key, item.toString());
+        });
+        return;
+      }
+
+      params.append(key, value.toString());
     });
     
     const response = await api.get<PostsResponse>(`/posts?${params.toString()}`);

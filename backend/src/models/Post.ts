@@ -1,13 +1,15 @@
-import { 
-  DataTypes, 
-  Model, 
-  Optional, 
-  Association, 
+import {
+  DataTypes,
+  Model,
+  Optional,
+  Association,
   HasManyGetAssociationsMixin,
   BelongsToGetAssociationMixin,
   HasManyCountAssociationsMixin
 } from 'sequelize';
 import { sequelize } from '../config/database';
+import Comment from './Comment';
+import User from './User';
 
 interface PostAttributes {
   id: number;
@@ -55,19 +57,19 @@ class Post extends Model<PostAttributes, PostCreationAttributes> implements Post
 
   // Intentionally inefficient method that will cause N+1 queries
   public async getCommentsWithAuthors(): Promise<any[]> {
-    const comments = await this.getComments();
-    const commentsWithAuthors = [];
-    
-    // N+1 Query Problem: This will make a separate query for each comment's author
-    for (const comment of comments) {
-      const author = await comment.getAuthor();
-      commentsWithAuthors.push({
-        ...comment.toJSON(),
-        author: author.toJSON()
-      });
-    }
-    
-    return commentsWithAuthors;
+    const comments = await Comment.findAll({
+      where: { postId: this.id },
+      include: [
+        {
+          model: User,
+          as: 'author',
+          attributes: ['id', 'username', 'avatar', 'role'],
+        },
+      ],
+      order: [['createdAt', 'ASC']],
+    });
+
+    return comments.map((comment) => comment.toJSON());
   }
 }
 

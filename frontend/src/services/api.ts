@@ -32,10 +32,24 @@ api.interceptors.response.use(
   },
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Clear token and redirect to login
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user_data');
-      window.location.href = '/login';
+      // If the 401 comes from login/register endpoints, let the component handle it
+      // (so the LoginPage/RegisterPage can show a specific toast and remain on the page).
+      const reqUrl = (error.config && (error.config.url || '')) as string;
+      const isAuthEndpoint = /\/auth\/(login|register)$/.test(reqUrl);
+
+      if (!isAuthEndpoint) {
+        // Clear token and notify application about unauthorized state.
+        // Previously we did a full-page redirect which caused 404s in some deployments.
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+        try {
+          window.dispatchEvent(new CustomEvent('unauthorized'));
+        } catch (e) {
+          // ignore
+        }
+      }
+      // If it's an auth endpoint, do not dispatch or clear storage here — allow the
+      // caller to show the appropriate error message and remain on the page.
     }
     return Promise.reject(error);
   }
