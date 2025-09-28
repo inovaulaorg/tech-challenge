@@ -1,10 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
-import { ToastContainer } from 'react-toastify';
+import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from 'react-query';
 
 import { theme } from './styles/theme';
 import { GlobalStyle } from './styles/GlobalStyle';
@@ -12,18 +12,15 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import { Layout } from './components/layout/Layout';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
-// import { HomePage } from './pages/posts/HomePage';
-// import { CreatePostPage } from './pages/posts/CreatePostPage';
-// import { PostDetailPage } from './pages/posts/PostDetailPage';
-
-// Simple placeholder components for now
-const HomePage = () => <div>Home Page - Coming Soon</div>;
-const CreatePostPage = () => <div>Create Post Page - Coming Soon</div>;
-const PostDetailPage = () => <div>Post Detail Page - Coming Soon</div>;
+import { HomePage } from './pages/posts/HomePage';
+import { CreatePostPage } from './pages/posts/CreatePostPage';
+import { PostDetailPage } from './pages/posts/PostDetailPage';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
+
+const queryClient = new QueryClient();
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -89,23 +86,25 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <GlobalStyle />
-      <Router>
-        <AuthProvider>
-          <UnauthorizedHandler />
-          <AppRoutes />
-          <ToastContainer
-            position="top-right"
-            autoClose={5000}
-            hideProgressBar={false}
-            newestOnTop={false}
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-          />
-        </AuthProvider>
-      </Router>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <AuthProvider>
+            <UnauthorizedHandler />
+            <AppRoutes />
+            <ToastContainer
+              position="top-right"
+              autoClose={5000}
+              hideProgressBar={false}
+              newestOnTop={false}
+              closeOnClick
+              rtl={false}
+              pauseOnFocusLoss
+              draggable
+              pauseOnHover
+            />
+          </AuthProvider>
+        </Router>
+      </QueryClientProvider>
     </ThemeProvider>
   );
 }

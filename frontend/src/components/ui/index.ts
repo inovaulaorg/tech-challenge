@@ -7,13 +7,15 @@ import {
   typography,
   border,
   shadow,
+  grid,
   SpaceProps,
   ColorProps,
   LayoutProps,
   FlexboxProps,
   TypographyProps,
   BorderProps,
-  ShadowProps
+  ShadowProps,
+  GridProps,
 } from 'styled-system';
 
 interface BoxProps extends
@@ -23,7 +25,8 @@ interface BoxProps extends
   FlexboxProps,
   TypographyProps,
   BorderProps,
-  ShadowProps {
+  ShadowProps,
+  GridProps {
   as?: keyof JSX.IntrinsicElements;
   gap?: string | number;
   rowGap?: string | number;
@@ -38,6 +41,7 @@ export const Box = styled.div<BoxProps>`
   ${typography}
   ${border}
   ${shadow}
+  ${grid}
 `;
 
 export const Flex = styled(Box)`
