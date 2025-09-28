@@ -1,18 +1,45 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import App from './App';
 
-// Intentionally broken test for evaluation
-test('renders learn react link', () => {
-  render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+jest.mock('axios', () => {
+  const mockInterceptors = {
+    request: { use: jest.fn() },
+    response: { use: jest.fn() },
+  };
+
+  const mockAxiosInstance = {
+    interceptors: mockInterceptors,
+    get: jest.fn(),
+    post: jest.fn(),
+    put: jest.fn(),
+    delete: jest.fn(),
+  };
+
+  return {
+    __esModule: true,
+    default: {
+      create: jest.fn(() => mockAxiosInstance),
+      interceptors: mockInterceptors,
+    },
+  };
 });
 
-// Another intentionally broken test
-test('should fail - broken test for evaluation', () => {
+beforeEach(() => {
+  localStorage.clear();
+});
+
+test('renders home placeholder content', async () => {
   render(<App />);
-  // This will fail because we don't have this text in our app
-  const nonExistentElement = screen.getByText(/this text does not exist/i);
-  expect(nonExistentElement).toBeInTheDocument();
+
+  await waitFor(() => {
+    expect(screen.getByText(/Home Page - Coming Soon/i)).toBeInTheDocument();
+  });
+});
+
+test('shows login link for unauthenticated user', async () => {
+  render(<App />);
+
+  const loginLink = await screen.findByRole('link', { name: /login/i });
+  expect(loginLink).toBeInTheDocument();
 });
