@@ -1,4 +1,5 @@
 import AWS from 'aws-sdk';
+import path from 'path';
 import { S3UploadResult } from '../types';
 
 // Configure AWS S3
@@ -10,9 +11,14 @@ const s3 = new AWS.S3({
 
 export const uploadToS3 = (
   file: Express.Multer.File,
-  folder: string = 'uploads'
+  folder: string = 'uploads',
+  ownerId?: number
 ): Promise<S3UploadResult> => {
-  const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}-${file.originalname}`;
+  const safeOriginalName = path.basename(file.originalname).replace(/[^a-zA-Z0-9._-]/g, '_');
+  const timestamp = Date.now();
+  const randomSuffix = Math.random().toString(36).substring(2, 10);
+  const keyPrefix = ownerId ? `${folder}/user-${ownerId}` : folder;
+  const fileName = `${keyPrefix}/${timestamp}-${randomSuffix}-${safeOriginalName}`;
   
   const uploadParams = {
     Bucket: process.env.AWS_S3_BUCKET || 'tech-challenge-blog-uploads',

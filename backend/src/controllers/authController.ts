@@ -17,10 +17,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       password,
       firstName,
       lastName,
-      role: requestedRole,
     }: CreateUserRequest = req.body;
 
-    const role: UserRole = requestedRole === "admin" ? "admin" : "user";
+    const role: UserRole = "user";
 
     // Check if user already exists
     const existingUser = await User.findOne({
