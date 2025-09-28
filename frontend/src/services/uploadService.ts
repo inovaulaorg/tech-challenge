@@ -16,7 +16,8 @@ export const uploadService = {
   },
 
   async deleteImage(key: string): Promise<{ message: string }> {
-    const response = await api.delete<{ message: string }>(`/upload/image/${key}`);
+    const encodedKey = encodeURIComponent(key);
+    const response = await api.delete<{ message: string }>(`/upload/image/${encodedKey}`);
     return response.data;
   },
 };
