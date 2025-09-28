@@ -18,6 +18,34 @@ import {
   GridProps,
 } from 'styled-system';
 
+const collectPropNames = (...fns: Array<{ propNames?: string[] }>) =>
+  fns.flatMap((fn) => fn?.propNames ?? []);
+
+const styledSystemPropNames = new Set<string>(
+  collectPropNames(space, color, layout, flexbox, typography, border, shadow, grid)
+);
+
+const shouldForwardStyleProp = (prop: string) => !styledSystemPropNames.has(prop);
+
+const resolveSpaceValue = (theme: any, value?: string | number) => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const spaceScale: Record<string | number, string> = theme?.space ?? {};
+
+  if (typeof value === 'number') {
+    const themeValue = spaceScale[value];
+    return themeValue ?? `${value}px`;
+  }
+
+  if (typeof value === 'string' && value in spaceScale) {
+    return spaceScale[value];
+  }
+
+  return value;
+};
+
 interface BoxProps extends
   SpaceProps,
   ColorProps,
@@ -33,7 +61,9 @@ interface BoxProps extends
   columnGap?: string | number;
 }
 
-export const Box = styled.div<BoxProps>`
+export const Box = styled('div').withConfig({
+  shouldForwardProp: (prop) => shouldForwardStyleProp(prop as string),
+})<BoxProps>`
   ${space}
   ${color}
   ${layout}
@@ -42,6 +72,18 @@ export const Box = styled.div<BoxProps>`
   ${border}
   ${shadow}
   ${grid}
+  ${({ theme, gap }) => {
+    const value = resolveSpaceValue(theme, gap);
+    return value ? css`gap: ${value};` : '';
+  }}
+  ${({ theme, rowGap }) => {
+    const value = resolveSpaceValue(theme, rowGap);
+    return value ? css`row-gap: ${value};` : '';
+  }}
+  ${({ theme, columnGap }) => {
+    const value = resolveSpaceValue(theme, columnGap);
+    return value ? css`column-gap: ${value};` : '';
+  }}
 `;
 
 export const Flex = styled(Box)`
