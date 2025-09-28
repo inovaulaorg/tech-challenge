@@ -17,17 +17,27 @@ export const LoginPage: React.FC = () => {
   const {
     register,
     handleSubmit,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<LoginRequest>();
 
   const onSubmit = async (data: LoginRequest) => {
     setIsLoading(true);
     try {
+      clearErrors();
+      // Try to log in
       await login(data.email, data.password);
       toast.success('Logged in successfully!');
       navigate('/');
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Login failed');
+      const message = error.response?.data?.error || 'Login failed';
+      // If credentials are invalid (401) show inline error under password
+      if (error.response?.status === 401) {
+        setError('password' as any, { type: 'server', message });
+      } else {
+        toast.error(message);
+      }
     } finally {
       setIsLoading(false);
     }

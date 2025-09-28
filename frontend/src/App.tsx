@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider } from 'styled-components';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 import { theme } from './styles/theme';
 import { GlobalStyle } from './styles/GlobalStyle';
@@ -89,6 +91,7 @@ function App() {
       <GlobalStyle />
       <Router>
         <AuthProvider>
+          <UnauthorizedHandler />
           <AppRoutes />
           <ToastContainer
             position="top-right"
@@ -106,5 +109,21 @@ function App() {
     </ThemeProvider>
   );
 }
+
+const UnauthorizedHandler: React.FC = () => {
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const handler = () => {
+      toast.error('Session expired or unauthorized. Please log in.');
+      navigate('/login');
+    };
+
+    window.addEventListener('unauthorized', handler as EventListener);
+    return () => window.removeEventListener('unauthorized', handler as EventListener);
+  }, [navigate]);
+
+  return null;
+};
 
 export default App;
