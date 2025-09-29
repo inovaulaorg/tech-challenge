@@ -8,6 +8,7 @@ import {
   HasManyCountAssociationsMixin
 } from 'sequelize';
 import { sequelize } from '../config/database';
+import { CommentWithAuthor } from '@/types';
 
 interface PostAttributes {
   id: number;
@@ -52,22 +53,28 @@ class Post extends Model<PostAttributes, PostCreationAttributes> implements Post
     comments: Association<Post, any>;
     likes: Association<Post, any>;
   };
+  comments: any;
+  likes: any;
 
-  // Intentionally inefficient method that will cause N+1 queries
+  // Now I optimized the method to avoid N+1 queries by using eager loading
   public async getCommentsWithAuthors(): Promise<any[]> {
-    const comments = await this.getComments();
-    const commentsWithAuthors = [];
-    
-    // N+1 Query Problem: This will make a separate query for each comment's author
-    for (const comment of comments) {
-      const author = await comment.getAuthor();
-      commentsWithAuthors.push({
-        ...comment.toJSON(),
-        author: author.toJSON()
-      });
-    }
-    
-    return commentsWithAuthors;
+    const { Comment, User } = require('./index');
+
+    const comments: CommentWithAuthor[] = await Comment.findAll({
+      where: { postId: this.id },
+      include: [
+        {
+          model: User,
+          as: 'author',
+          attributes: ['id', 'username', 'avatar'],
+        },
+      ],
+      order: [['updatedAt', 'ASC']],
+    });
+
+    const mappedComments = comments.map(comment => comment.toJSON());
+
+    return mappedComments;
   }
 }
 
