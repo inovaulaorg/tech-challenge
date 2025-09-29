@@ -79,5 +79,13 @@
       "last 1 safari version"
     ]
   },
+  "jest": {
+    "transformIgnorePatterns": [
+      "node_modules/(?!(axios)/)"
+    ],
+    "moduleNameMapper": {
+      "\\.(css|less|scss|sass)$": "<rootDir>/src/mocks/styleMock.js"
+    }
+  },
   "proxy": "http://localhost:3001"
 }
