@@ -1,21 +1,41 @@
+# Estágio de Build
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Copia os arquivos de dependência e instala TUDO (incluindo devDependencies)
+COPY package*.json ./
+RUN npm install
+
+# Copia o restante do código
+COPY . .
+
+# Compila o TypeScript
+RUN npm run build
+
+# Estágio de Produção
 FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy package files
+# Copia os arquivos de dependência novamente
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Instala APENAS as dependências de produção
+RUN npm ci --only=production && npm cache clean --force
 
-# Copy source code
-COPY . .
+# Copia o código já compilado do estágio "builder"
+COPY --from=builder /app/dist ./dist
 
-# Build the application
-RUN npm run build
+# Cria um usuário não-root para segurança
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Expose port
+# Dá permissão ao novo usuário
+RUN chown -R appuser:appgroup /app
+
+# Muda para o usuário não-root
+USER appuser
+
 EXPOSE 3001
 
-# Start the application
 CMD ["npm", "start"]

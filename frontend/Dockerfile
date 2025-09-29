@@ -1,24 +1,23 @@
-FROM node:18-alpine
+# Estágio de Build
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copia os arquivos de dependência e instala
 COPY package*.json ./
+RUN npm install
 
-# Install dependencies
-RUN npm ci --silent
-
-# Copy source code
+# Copia o resto do código
 COPY . .
 
-# Build the application
+# Gera a build de produção
 RUN npm run build
 
-# Install serve to run the app
-RUN npm install -g serve
+# Estágio de Produção com Nginx
+FROM nginx:stable-alpine
 
-# Expose port
-EXPOSE 3000
+# Copia os arquivos estáticos da build do estágio anterior
+COPY --from=builder /app/build /usr/share/nginx/html
 
-# Start the application
-CMD ["serve", "-s", "build", "-l", "3000"]
+# Expõe a porta 80 (padrão do Nginx)
+EXPOSE 80

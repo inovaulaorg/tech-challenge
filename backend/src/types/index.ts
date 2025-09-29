@@ -1,4 +1,5 @@
 import { Request } from 'express';
+import { ParsedQs } from 'qs';
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -50,12 +51,15 @@ export interface PaginationQuery {
   sortOrder?: 'ASC' | 'DESC';
 }
 
-export interface PostQuery extends PaginationQuery {
+export interface PostQuery extends ParsedQs {
+  page?: string;
+  limit?: string;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
   search?: string;
   tags?: string;
   authorId?: string;
 }
-
 export interface JWTPayload {
   id: number;
   email: string;

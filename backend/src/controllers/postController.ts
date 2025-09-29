@@ -1,6 +1,6 @@
 import { Response } from 'express';
-import { Op } from 'sequelize';
-import { Post, User, Comment, Like } from '../models';
+import { Op, Sequelize } from 'sequelize';
+import { Post, User, Comment, Like, sequelize } from '../models';
 import { AuthenticatedRequest, CreatePostRequest, UpdatePostRequest, PostQuery } from '../types';
 
 export const getPosts = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -41,39 +41,51 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
       whereClause.authorId = parseInt(authorId);
     }
 
-    // Intentional N+1 query problem: This will cause performance issues
     const posts = await Post.findAndCountAll({
       where: whereClause,
       limit: limitNumber,
       offset,
       order: [[sortBy, sortOrder]],
+      distinct: true,
       include: [
         {
           model: User,
           as: 'author',
           attributes: ['id', 'username', 'avatar'],
         },
-        // Missing eager loading for comments and likes - will cause N+1 queries
+        {
+          model: Comment,
+          as: 'comments',
+          attributes: ['id'], 
+        },
+        {
+          model: Like,
+          as: 'likes',
+          attributes: ['userId'], 
+        },
       ],
     });
 
-    // Intentionally inefficient: Making separate queries for each post
-    const postsWithCounts = await Promise.all(
-      posts.rows.map(async (post) => {
-        const commentCount = await Comment.count({ where: { postId: post.id } });
-        const likeCount = await Like.count({ where: { postId: post.id } });
-        const isLiked = req.user 
-          ? await Like.findOne({ where: { postId: post.id, userId: req.user.id } }) !== null
-          : false;
+    const postsWithCounts = posts.rows.map((post) => {
+      const postJSON = post.get({ plain: true });
+      
+      const commentCount = postJSON.comments?.length || 0;
+      const likeCount = postJSON.likes?.length || 0;
+      
+      const isLiked = req.user
+        ? postJSON.likes?.some((like: Like) => like.userId === req.user!.id) || false
+        : false;
 
-        return {
-          ...post.toJSON(),
-          commentCount,
-          likeCount,
-          isLiked,
-        };
-      })
-    );
+      delete postJSON.comments;
+      delete postJSON.likes;
+
+      return {
+        ...postJSON,
+        commentCount,
+        likeCount,
+        isLiked,
+      };
+    });
 
     res.status(200).json({
       posts: postsWithCounts,
@@ -102,6 +114,23 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
           as: 'author',
           attributes: ['id', 'username', 'firstName', 'lastName', 'avatar'],
         },
+        {
+          model: Comment, 
+          as: 'comments',
+          include: [{ 
+            model: User,
+            as: 'author',
+            attributes: ['id', 'username', 'avatar']
+          }],
+          where: { parentId: null },
+          required: false,
+          order: [['createdAt', 'DESC']]
+        },
+        {
+          model: Like,
+          as: 'likes',
+          attributes: ['userId']
+        }
       ],
     });
 
@@ -110,22 +139,20 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
 
-    // Increment view count
-    post.viewCount += 1;
-    await post.save();
+    await post.increment('viewCount');
 
-    // Intentional N+1 query problem: Get comments with authors inefficiently
-    const commentsWithAuthors = await post.getCommentsWithAuthors();
-    
-    const likeCount = await Like.count({ where: { postId: post.id } });
-    const isLiked = req.user 
-      ? await Like.findOne({ where: { postId: post.id, userId: req.user.id } }) !== null
+    const postJSON = post.get({ plain: true });
+
+    const likeCount = postJSON.likes?.length || 0;
+    const isLiked = req.user
+      ? postJSON.likes?.some((like: Like) => like.userId === req.user!.id) || false
       : false;
 
+    delete postJSON.likes;
+    
     res.status(200).json({
       post: {
-        ...post.toJSON(),
-        comments: commentsWithAuthors,
+        ...postJSON,
         likeCount,
         isLiked,
       },
@@ -135,7 +162,6 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
     res.status(500).json({ error: 'Internal server error' });
   }
 };
-
 export const createPost = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     if (!req.user) {
