@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
-import { Container, Flex, Box, Text, Button } from '../ui';
+import { Container, Flex, Text, Button } from '../ui';
 import { useAuth } from '../../hooks/useAuth';
+import { LoginModal } from '../modals/LoginModal';
 
 const HeaderContainer = styled.header`
   background-color: white;
@@ -10,7 +11,6 @@ const HeaderContainer = styled.header`
   position: sticky;
   top: 0;
   z-index: 1000;
-  /* Intentional performance issue: Missing will-change property */
   box-shadow: ${({ theme }) => theme.shadows.sm};
 `;
 
@@ -19,45 +19,10 @@ const Logo = styled(Link)`
   font-weight: ${({ theme }) => theme.fontWeights.bold};
   color: ${({ theme }) => theme.colors.primary[600]};
   text-decoration: none;
-  
+
   &:hover {
     color: ${({ theme }) => theme.colors.primary[700]};
     text-decoration: none;
-  }
-`;
-
-const NavLink = styled(Link)`
-  color: ${({ theme }) => theme.colors.gray[600]};
-  text-decoration: none;
-  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[4]};
-  border-radius: ${({ theme }) => theme.radii.md};
-  transition: all 0.2s ease-in-out;
-  
-  &:hover {
-    background-color: ${({ theme }) => theme.colors.gray[100]};
-    color: ${({ theme }) => theme.colors.gray[900]};
-    text-decoration: none;
-  }
-`;
-
-const UserMenu = styled(Box)`
-  position: relative;
-  display: inline-block;
-`;
-
-const UserButton = styled.button`
-  display: flex;
-  align-items: center;
-  gap: ${({ theme }) => theme.space[2]};
-  padding: ${({ theme }) => theme.space[2]};
-  border: none;
-  background: none;
-  cursor: pointer;
-  border-radius: ${({ theme }) => theme.radii.md};
-  transition: background-color 0.2s ease-in-out;
-  
-  &:hover {
-    background-color: ${({ theme }) => theme.colors.gray[100]};
   }
 `;
 
@@ -76,54 +41,65 @@ const Avatar = styled.div`
 
 export const Header: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-  };
+  const handleLogout = () => logout();
+  const openLoginModal = () => setIsLoginOpen(true);
+  const closeLoginModal = () => setIsLoginOpen(false);
 
   return (
-    <HeaderContainer>
-      <Container>
-        <Flex 
-          alignItems="center" 
-          justifyContent="space-between" 
-          py={4}
-        >
-          <Logo to="/">
-            TechBlog
-          </Logo>
-          
-          <Flex alignItems="center" gap={4}>
-            <NavLink to="/">Posts</NavLink>
-            
-            {isAuthenticated ? (
-              <>
-                <NavLink to="/create">Write</NavLink>
-                <UserMenu>
-                  <UserButton>
-                    <Avatar>
-                      {user?.username?.charAt(0)?.toUpperCase() || 'U'}
-                    </Avatar>
-                    <Text fontSize="sm" color="gray.600">
-                      {user?.username}
-                    </Text>
-                  </UserButton>
-                </UserMenu>
-                <Button variant="ghost" size="sm" onClick={handleLogout}>
-                  Logout
-                </Button>
-              </>
-            ) : (
-              <>
-                <NavLink to="/login">Login</NavLink>
-                <Button as={Link} to="/register" size="sm">
-                  Sign Up
-                </Button>
-              </>
-            )}
+    <>
+      <HeaderContainer>
+        <Container>
+          <Flex
+            as="header"
+            alignItems="center"
+            justifyContent="space-between"
+            flexWrap="wrap"
+            py={[3, 4]}
+            px={[2, 4]}
+          >
+            <Logo as={Link} to="/">TechBlog</Logo>
+
+            <Flex alignItems="center" gap={[2, 4]} mt={[2, 0]}>
+              <Button variant="ghost" as={Link} to="/posts" size="sm">
+                Posts
+              </Button>
+
+              {isAuthenticated ? (
+                <>
+                  <Button variant="ghost" as={Link} to="/create" size="sm">Write</Button>
+                  <Button
+                    variant="ghost"
+                    as={Link}
+                    to={`/profile/${user?.id}`}
+                    size="sm"
+                    gap={2}
+                  >
+                    <Avatar>{user?.username?.charAt(0)?.toUpperCase() || 'U'}</Avatar>
+                    <Text fontSize="sm">{user?.username}</Text>
+                  </Button>
+                  <Button variant="ghost" size="sm" as={Link} to="/" onClick={handleLogout}>
+                    Logout
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="ghost" size="sm" onClick={openLoginModal}>
+                    Login
+                  </Button>
+                  <Button variant="primary" as={Link} to="/register" size="sm">
+                    Sign Up
+                  </Button>
+                </>
+              )}
+            </Flex>
           </Flex>
-        </Flex>
-      </Container>
-    </HeaderContainer>
+        </Container>
+      </HeaderContainer>
+
+      {/* Login Modal */}
+      {isLoginOpen && <LoginModal isOpen={isLoginOpen} onClose={closeLoginModal} />}
+    </>
   );
 };

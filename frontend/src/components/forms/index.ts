@@ -15,24 +15,25 @@ export const FormGroup = styled(Box)`
 
 export const Label = styled(Text).attrs({ as: 'label', variant: 'label' })`
   cursor: pointer;
+  font-weight: ${({ theme }) => theme.fontWeights.normal};
 `;
 
 export const Input = styled.input<{ hasError?: boolean }>`
   padding: ${({ theme }) => theme.space[3]};
-  border: 1px solid ${({ theme, hasError }) => 
+  border: 1px solid ${({ theme, hasError }) =>
     hasError ? theme.colors.red[500] : theme.colors.gray[300]};
   border-radius: ${({ theme }) => theme.radii.md};
   font-size: ${({ theme }) => theme.fontSizes.base};
   transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-  
+
   &:focus {
     outline: none;
-    border-color: ${({ theme, hasError }) => 
+    border-color: ${({ theme, hasError }) =>
       hasError ? theme.colors.red[500] : theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme, hasError }) => 
+    box-shadow: 0 0 0 3px ${({ theme, hasError }) =>
       hasError ? `${theme.colors.red[500]}20` : `${theme.colors.primary[500]}20`};
   }
-  
+
   &::placeholder {
     color: ${({ theme }) => theme.colors.gray[400]};
   }
@@ -40,7 +41,7 @@ export const Input = styled.input<{ hasError?: boolean }>`
 
 export const TextArea = styled.textarea<{ hasError?: boolean }>`
   padding: ${({ theme }) => theme.space[3]};
-  border: 1px solid ${({ theme, hasError }) => 
+  border: 1px solid ${({ theme, hasError }) =>
     hasError ? theme.colors.red[500] : theme.colors.gray[300]};
   border-radius: ${({ theme }) => theme.radii.md};
   font-size: ${({ theme }) => theme.fontSizes.base};
@@ -48,15 +49,15 @@ export const TextArea = styled.textarea<{ hasError?: boolean }>`
   resize: vertical;
   min-height: 120px;
   transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-  
+
   &:focus {
     outline: none;
-    border-color: ${({ theme, hasError }) => 
+    border-color: ${({ theme, hasError }) =>
       hasError ? theme.colors.red[500] : theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme, hasError }) => 
+    box-shadow: 0 0 0 3px ${({ theme, hasError }) =>
       hasError ? `${theme.colors.red[500]}20` : `${theme.colors.primary[500]}20`};
   }
-  
+
   &::placeholder {
     color: ${({ theme }) => theme.colors.gray[400]};
   }
@@ -64,19 +65,19 @@ export const TextArea = styled.textarea<{ hasError?: boolean }>`
 
 export const Select = styled.select<{ hasError?: boolean }>`
   padding: ${({ theme }) => theme.space[3]};
-  border: 1px solid ${({ theme, hasError }) => 
+  border: 1px solid ${({ theme, hasError }) =>
     hasError ? theme.colors.red[500] : theme.colors.gray[300]};
   border-radius: ${({ theme }) => theme.radii.md};
   font-size: ${({ theme }) => theme.fontSizes.base};
   background-color: white;
   cursor: pointer;
   transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-  
+
   &:focus {
     outline: none;
-    border-color: ${({ theme, hasError }) => 
+    border-color: ${({ theme, hasError }) =>
       hasError ? theme.colors.red[500] : theme.colors.primary[500]};
-    box-shadow: 0 0 0 3px ${({ theme, hasError }) => 
+    box-shadow: 0 0 0 3px ${({ theme, hasError }) =>
       hasError ? `${theme.colors.red[500]}20` : `${theme.colors.primary[500]}20`};
   }
 `;
@@ -91,39 +92,43 @@ export const HelpText = styled(Text)`
   font-size: ${({ theme }) => theme.fontSizes.sm};
 `;
 
-// Intentional CSS issue: File input styling problems
-export const FileInput = styled.input.attrs({ type: 'file' })`
-  /* This styling will look broken on different browsers */
+interface FileInputWrapperProps {
+  label?: string;
+}
+
+export const FileInputWrapper = styled.label<FileInputWrapperProps>`
+  display: flex;
+  flex-direction: column;
+  gap: ${({ theme }) => theme.space[2]};
+  cursor: pointer;
   width: 100%;
-  padding: ${({ theme }) => theme.space[3]};
+`;
+
+export const FileInputButton = styled.span`
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: ${({ theme }) => theme.space[3]} ${({ theme }) => theme.space[4]};
   border: 2px dashed ${({ theme }) => theme.colors.gray[300]};
   border-radius: ${({ theme }) => theme.radii.md};
   background-color: ${({ theme }) => theme.colors.gray[50]};
-  cursor: pointer;
-  font-size: 0; /* This will hide the filename text completely */
-  
-  /* This will cause layout issues */
-  &::file-selector-button {
-    margin-right: 20px;
-    border: none;
-    background: ${({ theme }) => theme.colors.primary[500]};
-    padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[4]};
-    border-radius: ${({ theme }) => theme.radii.sm};
-    color: white;
-    cursor: pointer;
-    transition: background-color 0.2s ease-in-out;
-    font-size: ${({ theme }) => theme.fontSizes.sm};
-    /* Missing proper positioning and responsive design */
-  }
-  
-  &::file-selector-button:hover {
-    background: ${({ theme }) => theme.colors.primary[600]};
-    /* Expensive animation without optimization */
-    animation: file-button-hover 0.5s ease-in-out infinite alternate;
-  }
-  
-  @keyframes file-button-hover {
-    from { transform: translateY(0px); }
-    to { transform: translateY(-2px); }
+  color: ${({ theme }) => theme.colors.gray[700]};
+  font-size: ${({ theme }) => theme.fontSizes.base};
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.primary[500]};
+    background-color: ${({ theme }) => theme.colors.gray[100]};
   }
 `;
+
+export const FileInputStyled = styled.input.attrs({ type: 'file' })`
+  display: none;
+`;
+
+export const SelectedFileText = styled(Text)`
+  font-size: ${({ theme }) => theme.fontSizes.sm};
+  color: ${({ theme }) => theme.colors.gray[500]};
+`;
+
+export { Box };
