@@ -1,15 +1,13 @@
 import { Response } from 'express';
 import multer from 'multer';
-import AWS from 'aws-sdk';
+// AWS SDK is configured/used in utils/s3
+import fs from 'fs';
+import path from 'path';
 import { AuthenticatedRequest } from '../types';
 import { uploadToS3, deleteFromS3 } from '../utils/s3';
+import logger from '../utils/logger';
 
-// Configure AWS S3
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION || 'us-east-1',
-});
+// No local S3 client here; uploads are handled via utils/s3
 
 // Multer configuration for memory storage
 const memoryStorage = multer.memoryStorage();
@@ -56,7 +54,28 @@ export const uploadImage = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
 
-    // Upload to S3
+    const useLocal = process.env.USE_LOCAL_UPLOAD === 'true';
+    if (useLocal) {
+      const uploadsRoot = path.resolve(__dirname, '..', '..', 'public', 'uploads');
+      const folder = 'post-images';
+      const outDir = path.join(uploadsRoot, folder);
+      await fs.promises.mkdir(outDir, { recursive: true });
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}-${req.file.originalname}`;
+      const key = `${folder}/${fileName}`;
+      const filePath = path.join(outDir, fileName);
+      await fs.promises.writeFile(filePath, req.file.buffer);
+
+      res.status(200).json({
+        message: 'File uploaded successfully',
+        file: {
+          url: `/uploads/${key}`,
+          key,
+          bucket: 'local',
+        },
+      });
+      return;
+    }
+
     const result = await uploadToS3(req.file, 'post-images');
 
     res.status(200).json({
@@ -69,10 +88,11 @@ export const uploadImage = async (req: AuthenticatedRequest, res: Response): Pro
       },
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    logger.error('Upload error:', error);
     res.status(500).json({ 
       error: 'Upload failed',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      // Avoid leaking internal details; expose generic message
+      detail: 'An error occurred while uploading the file. Please try again later.'
     });
   }
 };
@@ -103,10 +123,10 @@ export const uploadImageDirect = async (req: AuthenticatedRequest, res: Response
       },
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    logger.error('Upload error:', error);
     res.status(500).json({ 
       error: 'Upload failed',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      detail: 'An error occurred while uploading the file. Please try again later.'
     });
   }
 };
@@ -126,16 +146,26 @@ export const deleteImage = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
 
-    await deleteFromS3(key);
+    const useLocal = process.env.USE_LOCAL_UPLOAD === 'true';
+    if (useLocal) {
+      const filePath = path.resolve(__dirname, '..', '..', 'public', 'uploads', key);
+      try {
+        await fs.promises.unlink(filePath);
+      } catch {
+        // ignore if not exists
+      }
+    } else {
+      await deleteFromS3(key);
+    }
 
     res.status(200).json({
       message: 'File deleted successfully',
     });
   } catch (error) {
-    console.error('Delete error:', error);
+    logger.error('Delete error:', error);
     res.status(500).json({ 
       error: 'Delete failed',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      detail: 'An error occurred while deleting the file. Please try again later.'
     });
   }
 };

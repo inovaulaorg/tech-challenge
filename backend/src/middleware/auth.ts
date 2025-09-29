@@ -1,7 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest, JWTPayload } from '../types';
 import { User } from '../models';
+import { verifyToken } from '../utils/jwt';
+import logger from '../utils/logger';
 
 export const authenticateToken = async (
   req: AuthenticatedRequest,
@@ -17,7 +18,7 @@ export const authenticateToken = async (
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as JWTPayload;
+    const decoded = verifyToken(token) as JWTPayload;
     
     // Verify user still exists
     const user = await User.findByPk(decoded.id);
@@ -34,7 +35,7 @@ export const authenticateToken = async (
     
     next();
   } catch (error) {
-    console.error('Token verification error:', error);
+    logger.error('Token verification error:', error);
     res.status(403).json({ error: 'Invalid or expired token' });
   }
 };
@@ -53,7 +54,7 @@ export const optionalAuth = async (
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as JWTPayload;
+    const decoded = verifyToken(token) as JWTPayload;
     
     const user = await User.findByPk(decoded.id);
     if (user && user.isActive) {

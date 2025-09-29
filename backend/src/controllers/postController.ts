@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { Op } from 'sequelize';
 import { Post, User, Comment, Like } from '../models';
 import { AuthenticatedRequest, CreatePostRequest, UpdatePostRequest, PostQuery } from '../types';
+import logger from '../utils/logger';
 
 export const getPosts = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -41,7 +42,6 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
       whereClause.authorId = parseInt(authorId);
     }
 
-    // Intentional N+1 query problem: This will cause performance issues
     const posts = await Post.findAndCountAll({
       where: whereClause,
       limit: limitNumber,
@@ -53,27 +53,31 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
           as: 'author',
           attributes: ['id', 'username', 'avatar'],
         },
-        // Missing eager loading for comments and likes - will cause N+1 queries
+        {
+          model: Comment,
+          as: 'comments',
+          attributes: ['id'],
+        },
+        {
+          model: Like,
+          as: 'likes',
+          attributes: ['id', 'userId'],
+        },
       ],
     });
 
-    // Intentionally inefficient: Making separate queries for each post
-    const postsWithCounts = await Promise.all(
-      posts.rows.map(async (post) => {
-        const commentCount = await Comment.count({ where: { postId: post.id } });
-        const likeCount = await Like.count({ where: { postId: post.id } });
-        const isLiked = req.user 
-          ? await Like.findOne({ where: { postId: post.id, userId: req.user.id } }) !== null
-          : false;
-
-        return {
-          ...post.toJSON(),
-          commentCount,
-          likeCount,
-          isLiked,
-        };
-      })
-    );
+    const postsWithCounts = posts.rows.map((post) => {
+      const jsonPost: any = post.toJSON();
+      const enrichedPost = {
+        ...jsonPost,
+        commentCount: jsonPost.comments.length,
+        likeCount: jsonPost.likes.length,
+        isLiked: req.user ? jsonPost.likes.some((like: { userId: number }) => like.userId === req.user?.id) : false,
+      };
+      delete enrichedPost.comments;
+      delete enrichedPost.likes;
+      return enrichedPost;
+    });
 
     res.status(200).json({
       posts: postsWithCounts,
@@ -86,7 +90,7 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
       },
     });
   } catch (error) {
-    console.error('Get posts error:', error);
+    logger.error('Get posts error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -102,6 +106,37 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
           as: 'author',
           attributes: ['id', 'username', 'firstName', 'lastName', 'avatar'],
         },
+        {
+          model: Comment,
+          as: 'comments',
+          where: { isApproved: true } as any,
+          required: false,
+          include: [
+            {
+              model: User,
+              as: 'author',
+              attributes: ['id', 'username', 'avatar'],
+            },
+            {
+              model: Comment,
+              as: 'replies',
+              where: { isApproved: true } as any,
+              required: false,
+              include: [
+                {
+                  model: User,
+                  as: 'author',
+                  attributes: ['id', 'username', 'avatar'],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: Like,
+          as: 'likes',
+          attributes: ['id', 'userId'],
+        },
       ],
     });
 
@@ -114,24 +149,19 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
     post.viewCount += 1;
     await post.save();
 
-    // Intentional N+1 query problem: Get comments with authors inefficiently
-    const commentsWithAuthors = await post.getCommentsWithAuthors();
-    
-    const likeCount = await Like.count({ where: { postId: post.id } });
-    const isLiked = req.user 
-      ? await Like.findOne({ where: { postId: post.id, userId: req.user.id } }) !== null
-      : false;
+    const jsonPost: any = post.toJSON();
+    const enrichedPost = {
+      ...jsonPost,
+      likeCount: jsonPost.likes.length,
+      isLiked: req.user ? jsonPost.likes.some((like: { userId: number }) => like.userId === req.user?.id) : false,
+    };
+    delete enrichedPost.likes;
 
     res.status(200).json({
-      post: {
-        ...post.toJSON(),
-        comments: commentsWithAuthors,
-        likeCount,
-        isLiked,
-      },
+      post: enrichedPost,
     });
   } catch (error) {
-    console.error('Get post by id error:', error);
+    logger.error('Get post by id error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -171,7 +201,7 @@ export const createPost = async (req: AuthenticatedRequest, res: Response): Prom
       post: createdPost,
     });
   } catch (error) {
-    console.error('Create post error:', error);
+    logger.error('Create post error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -221,7 +251,7 @@ export const updatePost = async (req: AuthenticatedRequest, res: Response): Prom
       post: updatedPost,
     });
   } catch (error) {
-    console.error('Update post error:', error);
+    logger.error('Update post error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -253,7 +283,7 @@ export const deletePost = async (req: AuthenticatedRequest, res: Response): Prom
       message: 'Post deleted successfully',
     });
   } catch (error) {
-    console.error('Delete post error:', error);
+    logger.error('Delete post error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -285,7 +315,7 @@ export const likePost = async (req: AuthenticatedRequest, res: Response): Promis
       res.status(200).json({ message: 'Post liked', liked: true });
     }
   } catch (error) {
-    console.error('Like post error:', error);
+    logger.error('Like post error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

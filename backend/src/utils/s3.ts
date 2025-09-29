@@ -8,14 +8,25 @@ const s3 = new AWS.S3({
   region: process.env.AWS_REGION || 'us-east-1',
 });
 
+// Enforce bucket configuration unless using local upload fallback
+const USE_LOCAL_UPLOAD = process.env.USE_LOCAL_UPLOAD === 'true';
+const AWS_S3_BUCKET = process.env.AWS_S3_BUCKET;
+if (!USE_LOCAL_UPLOAD && !AWS_S3_BUCKET) {
+  throw new Error('AWS_S3_BUCKET is not set. Configure process.env.AWS_S3_BUCKET');
+}
+
 export const uploadToS3 = (
   file: Express.Multer.File,
   folder: string = 'uploads'
 ): Promise<S3UploadResult> => {
+  const bucket = AWS_S3_BUCKET;
+  if (!bucket) {
+    throw new Error('AWS_S3_BUCKET is not set. S3 upload is disabled when USE_LOCAL_UPLOAD=true');
+  }
   const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}-${file.originalname}`;
   
   const uploadParams = {
-    Bucket: process.env.AWS_S3_BUCKET || 'tech-challenge-blog-uploads',
+    Bucket: bucket,
     Key: fileName,
     Body: file.buffer,
     ContentType: file.mimetype,
@@ -34,8 +45,12 @@ export const uploadToS3 = (
 };
 
 export const deleteFromS3 = (key: string): Promise<void> => {
+  const bucket = AWS_S3_BUCKET;
+  if (!bucket) {
+    throw new Error('AWS_S3_BUCKET is not set. S3 delete is disabled when USE_LOCAL_UPLOAD=true');
+  }
   const deleteParams = {
-    Bucket: process.env.AWS_S3_BUCKET || 'tech-challenge-blog-uploads',
+    Bucket: bucket,
     Key: key,
   };
 
@@ -51,8 +66,12 @@ export const deleteFromS3 = (key: string): Promise<void> => {
 };
 
 export const generateSignedUrl = (key: string, expiresIn: number = 3600): string => {
+  const bucket = AWS_S3_BUCKET;
+  if (!bucket) {
+    throw new Error('AWS_S3_BUCKET is not set. Signed URL is unavailable when USE_LOCAL_UPLOAD=true');
+  }
   return s3.getSignedUrl('getObject', {
-    Bucket: process.env.AWS_S3_BUCKET || 'tech-challenge-blog-uploads',
+    Bucket: bucket,
     Key: key,
     Expires: expiresIn,
   });
