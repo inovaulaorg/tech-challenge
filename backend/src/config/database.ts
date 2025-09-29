@@ -3,6 +3,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+console.log(process.env.DB_PASSWORD, 'DB_PASSWORD')
+
 const sequelize = new Sequelize({
   database: process.env.DB_NAME || 'tech_challenge_blog',
   username: process.env.DB_USER || 'admin',

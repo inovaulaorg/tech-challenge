@@ -9,6 +9,7 @@ import {
 } from 'sequelize';
 import { sequelize } from '../config/database';
 
+
 interface PostAttributes {
   id: number;
   title: string;
