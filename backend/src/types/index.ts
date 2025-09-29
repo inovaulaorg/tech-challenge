@@ -8,6 +8,13 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
+// Adicionado DTO para garantir tipagem do request do update de perfil
+export interface UpdateProfileRequest {
+  firstName?: string;
+  lastName?: string;
+  avatar?: string;
+}
+
 export interface CreateUserRequest {
   username: string;
   email: string;

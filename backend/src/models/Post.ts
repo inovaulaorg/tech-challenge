@@ -1,12 +1,14 @@
-import { 
-  DataTypes, 
-  Model, 
-  Optional, 
-  Association, 
+import {
+  DataTypes,
+  Model,
+  Optional,
+  Association,
   HasManyGetAssociationsMixin,
   BelongsToGetAssociationMixin,
   HasManyCountAssociationsMixin
 } from 'sequelize';
+import Comment from './Comment';
+import Like from './Like';
 import { sequelize } from '../config/database';
 
 interface PostAttributes {
@@ -41,6 +43,9 @@ class Post extends Model<PostAttributes, PostCreationAttributes> implements Post
   public readonly updatedAt!: Date;
 
   // Associations
+  public comments?: Comment[];
+  public likes?: Like[];
+
   public getAuthor!: BelongsToGetAssociationMixin<any>;
   public getComments!: HasManyGetAssociationsMixin<any>;
   public countComments!: HasManyCountAssociationsMixin;
@@ -53,22 +58,7 @@ class Post extends Model<PostAttributes, PostCreationAttributes> implements Post
     likes: Association<Post, any>;
   };
 
-  // Intentionally inefficient method that will cause N+1 queries
-  public async getCommentsWithAuthors(): Promise<any[]> {
-    const comments = await this.getComments();
-    const commentsWithAuthors = [];
-    
-    // N+1 Query Problem: This will make a separate query for each comment's author
-    for (const comment of comments) {
-      const author = await comment.getAuthor();
-      commentsWithAuthors.push({
-        ...comment.toJSON(),
-        author: author.toJSON()
-      });
-    }
-    
-    return commentsWithAuthors;
-  }
+  // eliminada querie n+1 desnecessária
 }
 
 Post.init(
