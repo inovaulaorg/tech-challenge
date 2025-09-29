@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { Container, Box, Text, Flex } from '../ui';
+ import { Container, Box, Text, Flex } from '../ui';
 
 const FooterContainer = styled.footer`
   background-color: ${({ theme }) => theme.colors.gray[900]};

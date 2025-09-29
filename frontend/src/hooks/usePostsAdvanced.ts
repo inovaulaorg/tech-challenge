@@ -53,10 +53,9 @@ export const usePostsAdvanced = (options?: {
   const createPostMutation = useMutation(
     (postData: CreatePostRequest) => postService.createPost(postData),
     {
-      onSuccess: (newPost) => {
-        // Invalidate and refetch posts
+      onSuccess: (res: { message: string; post: Post }) => {
         queryClient.invalidateQueries(['posts']);
-        queryClient.setQueryData(['post', newPost.id], newPost);
+        queryClient.setQueryData(['post', res.post.id], res.post);
       },
       onError: (error) => {
         console.error('Error creating post:', error);
@@ -69,14 +68,11 @@ export const usePostsAdvanced = (options?: {
     ({ id, data }: { id: number; data: UpdatePostRequest }) =>
       postService.updatePost(id, data),
     {
-      onSuccess: (updatedPost) => {
-        // Update cache
-        queryClient.setQueryData(['post', updatedPost.id], updatedPost);
+      onSuccess: (res: { message: string; post: Post }) => {
+        queryClient.setQueryData(['post', res.post.id], res.post);
         queryClient.invalidateQueries(['posts']);
       },
-      onError: (error) => {
-        console.error('Error updating post:', error);
-      }
+      onError: (error) => console.error('Error updating post:', error),
     }
   );
 
@@ -122,7 +118,7 @@ export const usePostsAdvanced = (options?: {
               ? {
                   ...post,
                   isLiked: !post.isLiked,
-                  likeCount: post.isLiked ? post.likeCount - 1 : post.likeCount + 1,
+                  likeCount: post.isLiked ? (post.likeCount??0) - 1 : (post.likeCount??0) + 1,
                 }
               : post
           ),
@@ -169,13 +165,8 @@ export const usePostsAdvanced = (options?: {
     return likePostMutation.mutateAsync(postId);
   }, [likePostMutation, user]);
 
-  const canEditPost = useCallback((post: Post) => {
-    return user && (user.id === post.authorId || user.role === 'admin');
-  }, [user]);
-
-  const canDeletePost = useCallback((post: Post) => {
-    return user && (user.id === post.authorId || user.role === 'admin');
-  }, [user]);
+  const canEditPost = useCallback((post: Post) => user && (user.id === post.authorId || (user as any).role === 'admin'), [user]);
+  const canDeletePost = useCallback((post: Post) => user && (user.id === post.authorId || (user as any).role === 'admin'), [user]);
 
   return {
     // Data
@@ -237,16 +228,17 @@ export const usePost = (postId: number, enabled = true) => {
 
   // Prefetch related posts
   useEffect(() => {
-    if (post?.tags && post.tags.length > 0) {
+    if (post?.post?.tags && post?.post?.tags.length > 0) {
+      const tags = post.post.tags.slice(0, 3);
       queryClient.prefetchQuery(
-        ['posts', { tags: post.tags.slice(0, 3) }],
-        () => postService.getPosts({ tags: post.tags.slice(0, 3), limit: 5 }),
+        ['posts', { tags}],
+        () => postService.getPosts({ tags, limit: 5 }),
         {
           staleTime: 10 * 60 * 1000, // 10 minutes
         }
       );
     }
-  }, [post?.tags, queryClient]);
+  }, [post?.post?.tags, queryClient]);
 
   return {
     post,
@@ -314,7 +306,8 @@ export const usePostSearch = () => {
   });
 
   const addTag = useCallback((tag: string) => {
-    setSelectedTags(prev => [...new Set([...prev, tag])]);
+    setSelectedTags(prev => Array.from(new Set([...prev, tag])));
+
   }, []);
 
   const removeTag = useCallback((tag: string) => {

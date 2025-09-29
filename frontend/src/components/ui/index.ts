@@ -1,41 +1,76 @@
 import styled, { css } from 'styled-components';
 import { 
   space, 
-  color, 
   layout, 
   flexbox, 
   typography, 
   border,
+  system,
   SpaceProps, 
-  ColorProps, 
   LayoutProps, 
   FlexboxProps,
   TypographyProps,
-  BorderProps
+  BorderProps,
+  ColorProps,
 } from 'styled-system';
+import { get } from 'lodash';
+import isPropValid from '@emotion/is-prop-valid'; 
+
+
+const gap = system({
+  gap: {
+    property: 'gap',
+    scale: 'space',
+  },
+});
+
+const customColor = (props: any) => {
+  const customStyles: { [key: string]: any } = {};
+  const { theme, color, backgroundColor, bg, borderColor } = props;
+  const colorProps = {
+    color: color,
+    backgroundColor: backgroundColor || bg,
+    borderColor: borderColor,
+  };
+  for (const [prop, value] of Object.entries(colorProps)) {
+    if (value && typeof value === 'string') {
+      const themeColor = get(theme.colors, value, value);
+      customStyles[prop] = themeColor;
+    }
+  }
+  return css(customStyles as any);
+};
 
 interface BoxProps extends 
   SpaceProps, 
-  ColorProps, 
   LayoutProps, 
   FlexboxProps,
   TypographyProps,
-  BorderProps {
+  BorderProps,
+  ColorProps {
   as?: keyof JSX.IntrinsicElements;
+  gap?: SpaceProps['margin'];
 }
 
-export const Box = styled.div<BoxProps>`
+
+export const Box = styled.div.withConfig({
+  shouldForwardProp: (prop) => isPropValid(prop),
+})<BoxProps>`
+  /* As funções de styled-system são aplicadas aqui */
   ${space}
-  ${color}
   ${layout}
   ${flexbox}
   ${typography}
   ${border}
+  ${gap} 
+  ${customColor} 
 `;
+
 
 export const Flex = styled(Box)`
   display: flex;
 `;
+
 
 export const Container = styled(Box)`
   width: 100%;
@@ -43,19 +78,19 @@ export const Container = styled(Box)`
   padding-left: ${({ theme }) => theme.space[4]};
   padding-right: ${({ theme }) => theme.space[4]};
   
-  @media (min-width: ${({ theme }) => theme.breakpoints.sm}) {
+  @media (min-width: ${({ theme }) => theme.breakpoints[0]}) { // sm
     max-width: ${({ theme }) => theme.sizes.container.sm};
   }
   
-  @media (min-width: ${({ theme }) => theme.breakpoints.md}) {
+  @media (min-width: ${({ theme }) => theme.breakpoints[1]}) { // md
     max-width: ${({ theme }) => theme.sizes.container.md};
   }
   
-  @media (min-width: ${({ theme }) => theme.breakpoints.lg}) {
+  @media (min-width: ${({ theme }) => theme.breakpoints[2]}) { // lg
     max-width: ${({ theme }) => theme.sizes.container.lg};
   }
   
-  @media (min-width: ${({ theme }) => theme.breakpoints.xl}) {
+  @media (min-width: ${({ theme }) => theme.breakpoints[3]}) { // xl
     max-width: ${({ theme }) => theme.sizes.container.xl};
   }
 `;
@@ -64,15 +99,18 @@ export const Grid = styled(Box)`
   display: grid;
 `;
 
+
 interface TextProps extends TypographyProps, ColorProps, SpaceProps {
   variant?: 'body' | 'heading' | 'caption' | 'label';
   as?: keyof JSX.IntrinsicElements;
 }
 
-export const Text = styled.span<TextProps>`
+export const Text = styled.span.withConfig({
+  shouldForwardProp: (prop) => isPropValid(prop),
+})<TextProps>`
   ${typography}
-  ${color}
   ${space}
+  ${customColor}
   
   ${({ variant, theme }) => {
     switch (variant) {
@@ -85,7 +123,7 @@ export const Text = styled.span<TextProps>`
       case 'caption':
         return css`
           font-size: ${theme.fontSizes.sm};
-          color: ${theme.colors.gray[500]};
+          color: ${get(theme.colors, 'gray.500', '#6c757d')};
         `;
       case 'label':
         return css`

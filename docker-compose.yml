@@ -5,51 +5,59 @@ services:
     image: postgres:15-alpine
     container_name: tech-challenge-db
     environment:
-      POSTGRES_DB: tech_challenge_blog
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password123
+      #As senhas e dados sensíveis são agora lidos de um arquivo .env
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - tech-challenge-network
+    #Se o contêiner falhar, ele tentará reiniciar automaticamente.
+    restart: unless-stopped
+    #Adicionado um health check para verificar se o banco de dados
+    #está realmente pronto para aceitar conexões, não apenas iniciado.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: tech-challenge-backend
-    environment:
-      NODE_ENV: development
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: tech_challenge_blog
-      DB_USER: admin
-      DB_PASSWORD: password123
-      JWT_SECRET: your-super-secret-jwt-key-here
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
-      AWS_REGION: ${AWS_REGION:-us-east-1}
+    #Usando 'env_file' para carregar todas as variáveis de ambiente
+    #de um arquivo central, mantendo este arquivo limpo e seguro.
+    env_file:
+      - .env
     ports:
       - "3001:3001"
+    # 'depends_on' agora espera que o serviço 'postgres' esteja 'healthy' (saudável),
+    # não apenas 'started' (iniciado). Isso resolve o problema de o backend iniciar antes do DB.
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     volumes:
       - ./backend:/app
       - /app/node_modules
     networks:
       - tech-challenge-network
-    # Intentional issue: missing restart policy
+    #Adicionada política de reinício.
+    restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: tech-challenge-frontend
+    # Variável de ambiente também pode vir de um .env para consistência,
+    # embora neste caso seja menos crítico.
     environment:
-      REACT_APP_API_URL: http://localhost:3001
+      - REACT_APP_API_URL=${REACT_APP_API_URL}
     ports:
       - "3000:3000"
     depends_on:
@@ -59,10 +67,14 @@ services:
       - /app/node_modules
     networks:
       - tech-challenge-network
+    # Adicionada política de reinício.
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+    driver: local
 
 networks:
   tech-challenge-network:
     driver: bridge
+

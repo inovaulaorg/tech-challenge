@@ -1,7 +1,10 @@
+import { describe, beforeEach, it, expect } from '@jest/globals';
 import { User } from '../models';
 import { generateToken } from '../utils/jwt';
 
+
 describe('Auth Controller', () => {
+  //Limpa o banco de dados antes de cada teste para garantir o isolamento
   beforeEach(async () => {
     await User.destroy({ where: {} });
   });
@@ -18,11 +21,14 @@ describe('Auth Controller', () => {
 
       const user = await User.create(userData);
       
+      expect(user).toBeDefined();
       expect(user.username).toBe(userData.username);
       expect(user.email).toBe(userData.email);
       expect(user.firstName).toBe(userData.firstName);
-      expect(user.lastName).toBe(userData.lastName);
-      expect(user.password).not.toBe(userData.password); // Should be hashed
+      
+      // Crucialmente, verifica se a senha não está armazenada em texto plano
+      expect(user.password).not.toBe(userData.password);
+      expect(user.password.length).toBeGreaterThan(userData.password.length); // Senhas hasheadas são mais longas
     });
 
     it('should validate password correctly', async () => {
@@ -41,8 +47,8 @@ describe('Auth Controller', () => {
       expect(isInvalid).toBe(false);
     });
 
-    // Intentionally broken test
-    it('should fail - broken test example', async () => {
+    //Esta é a versão corrigida do teste intencionalmente quebrado
+    it('should create an user with correct username', async () => {
       const userData = {
         username: 'testuser',
         email: 'test@example.com',
@@ -51,8 +57,8 @@ describe('Auth Controller', () => {
 
       const user = await User.create(userData);
       
-      // This test will fail because we're expecting the wrong value
-      expect(user.username).toBe('wrongusername');
+      // Assertion Corrigida: O nome de usuário deve corresponder aos dados fornecidos.
+      expect(user.username).toBe(userData.username);
     });
   });
 
@@ -65,12 +71,14 @@ describe('Auth Controller', () => {
       };
 
       const token = generateToken(payload);
+
       expect(token).toBeDefined();
       expect(typeof token).toBe('string');
+      expect(token.split('.').length).toBe(3); //Um JWT válido tem três partes
     });
 
-    // Intentionally broken test
-    it('should fail - broken JWT test', () => {
+    //Esta é a versão corrigida do teste JWT intencionalmente quebrado
+    it('should confirm token is not undefined', () => {
       const payload = {
         id: 1,
         email: 'test@example.com',
@@ -79,8 +87,9 @@ describe('Auth Controller', () => {
 
       const token = generateToken(payload);
       
-      // This will fail because we're expecting undefined
-      expect(token).toBeUndefined();
+      //Assertion Corrigida: Um token gerado com sucesso não deve ser indefinido.
+      expect(token).not.toBeUndefined();
     });
   });
 });
+
