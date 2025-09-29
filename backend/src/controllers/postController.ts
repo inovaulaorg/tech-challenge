@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { Op } from 'sequelize';
+import { Op, fn, col } from 'sequelize';
 import { Post, User, Comment, Like } from '../models';
 import { AuthenticatedRequest, CreatePostRequest, UpdatePostRequest, PostQuery } from '../types';
 
@@ -41,7 +41,7 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
       whereClause.authorId = parseInt(authorId);
     }
 
-    // Intentional N+1 query problem: This will cause performance issues
+    // Intentional N+1 query problem solved
     const posts = await Post.findAndCountAll({
       where: whereClause,
       limit: limitNumber,
@@ -53,27 +53,63 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
           as: 'author',
           attributes: ['id', 'username', 'avatar'],
         },
-        // Missing eager loading for comments and likes - will cause N+1 queries
+        {
+          model: Comment,
+          as: 'comments',
+          include: [
+            {
+              model: User,
+              as: 'author',
+              attributes: ['id', 'username', 'avatar'],
+            }
+          ]
+        },
+        {
+          model: Like,
+          as: 'likes',
+          attributes: ['id'],
+        },
       ],
     });
 
-    // Intentionally inefficient: Making separate queries for each post
-    const postsWithCounts = await Promise.all(
-      posts.rows.map(async (post) => {
-        const commentCount = await Comment.count({ where: { postId: post.id } });
-        const likeCount = await Like.count({ where: { postId: post.id } });
-        const isLiked = req.user 
-          ? await Like.findOne({ where: { postId: post.id, userId: req.user.id } }) !== null
-          : false;
+    // Intentionally inefficient solved
+    const postIds = posts.rows.map(post => post.id);
 
-        return {
-          ...post.toJSON(),
-          commentCount,
-          likeCount,
-          isLiked,
-        };
-      })
-    );
+    const commentCounts = await Comment.findAll({
+      attributes: ['postId', [fn('COUNT', col('id')), 'count']],
+      where: { postId: postIds },
+      group: ['postId'],
+      raw: true,
+    });
+
+    const likeCounts = await Like.findAll({
+      attributes: ['postId', [fn('COUNT', col('id')), 'count']], 
+      where: { postId: postIds },
+      group: ['postId'],
+      raw: true,
+    });
+
+    let likedPostIds: number[] = [];
+    if (req.user) {
+      const likedPosts = await Like.findAll({
+        attributes: ['postId'],
+        where: { postId: postIds, userId: req.user.id },
+        raw: true,
+      });
+      likedPostIds = likedPosts.map(like => like.postId);
+    }
+
+    const getCount = (arr: any[], postId: number) => {
+      const found = arr.find(item => item.postId === postId);
+      return found ? parseInt(found.count) : 0;
+    };
+
+    const postsWithCounts = posts.rows.map(post => ({
+      ...post.toJSON(),
+      commentCount: getCount(commentCounts, post.id),
+      likeCount: getCount(likeCounts, post.id),
+      isLiked: req.user ? likedPostIds.includes(post.id) : false,
+    }));
 
     res.status(200).json({
       posts: postsWithCounts,
@@ -111,11 +147,22 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
     }
 
     // Increment view count
+    // Improvement suggestion: create a new field for viewedBy, storing user id that viewed post
+    // preventing same user to increase viewCount multiple times
     post.viewCount += 1;
     await post.save();
 
-    // Intentional N+1 query problem: Get comments with authors inefficiently
-    const commentsWithAuthors = await post.getCommentsWithAuthors();
+    // Intentional N+1 query problem solved
+    const commentsWithAuthors = await Comment.findAll({
+      where: { postId: post.id },
+      include: [
+        {
+          model: User,
+          as: 'author',
+          attributes: ['id', 'username', 'avatar'],
+        },
+      ],
+    });
     
     const likeCount = await Like.count({ where: { postId: post.id } });
     const isLiked = req.user 

@@ -101,9 +101,19 @@ export const useComments = (postId: number | null) => {
     }
   };
 
-  const refreshComments = () => {
-    if (postId) {
-      // Re-fetch comments
+  const refreshComments = async () => {
+    if (!postId) return;
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await commentService.getComments(postId);
+      setComments(response.comments);
+      setPagination(response.pagination);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to fetch comments');
+    } finally {
+      setLoading(false);
     }
   };
 

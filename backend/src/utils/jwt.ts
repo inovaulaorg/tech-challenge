@@ -1,8 +1,10 @@
 import jwt from 'jsonwebtoken';
 import { JWTPayload } from '../types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-fallback-secret-key';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN;
 
 export const generateToken = (payload: Omit<JWTPayload, 'iat' | 'exp'>): string => {
   return jwt.sign(payload as any, JWT_SECRET as any, {
@@ -15,7 +17,11 @@ export const verifyToken = (token: string): JWTPayload => {
 };
 
 export const generateRefreshToken = (payload: Omit<JWTPayload, 'iat' | 'exp'>): string => {
-  return jwt.sign(payload as any, JWT_SECRET as any, {
-    expiresIn: '30d',
+  return jwt.sign(payload as any, JWT_REFRESH_SECRET as any, {
+    expiresIn: JWT_REFRESH_EXPIRES_IN,
   } as any);
+};
+
+export const verifyRefreshToken = (token: string): JWTPayload => {
+  return jwt.verify(token, JWT_REFRESH_SECRET as any) as JWTPayload;
 };

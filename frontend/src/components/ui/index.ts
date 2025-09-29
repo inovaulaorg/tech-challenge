@@ -6,12 +6,14 @@ import {
   flexbox, 
   typography, 
   border,
+  boxShadow,
   SpaceProps, 
   ColorProps, 
   LayoutProps, 
   FlexboxProps,
   TypographyProps,
-  BorderProps
+  BorderProps,
+  BoxShadowProps
 } from 'styled-system';
 
 interface BoxProps extends 
@@ -20,7 +22,8 @@ interface BoxProps extends
   LayoutProps, 
   FlexboxProps,
   TypographyProps,
-  BorderProps {
+  BorderProps,
+  BoxShadowProps {
   as?: keyof JSX.IntrinsicElements;
 }
 
@@ -31,6 +34,7 @@ export const Box = styled.div<BoxProps>`
   ${flexbox}
   ${typography}
   ${border}
+  ${boxShadow}
 `;
 
 export const Flex = styled(Box)`
@@ -43,19 +47,19 @@ export const Container = styled(Box)`
   padding-left: ${({ theme }) => theme.space[4]};
   padding-right: ${({ theme }) => theme.space[4]};
   
-  @media (min-width: ${({ theme }) => theme.breakpoints.sm}) {
+  @media (min-width: ${({ theme }) => theme.breakpoints[0]}) {
     max-width: ${({ theme }) => theme.sizes.container.sm};
   }
-  
-  @media (min-width: ${({ theme }) => theme.breakpoints.md}) {
+
+  @media (min-width: ${({ theme }) => theme.breakpoints[1]}) {
     max-width: ${({ theme }) => theme.sizes.container.md};
   }
-  
-  @media (min-width: ${({ theme }) => theme.breakpoints.lg}) {
+
+  @media (min-width: ${({ theme }) => theme.breakpoints[2]}) {
     max-width: ${({ theme }) => theme.sizes.container.lg};
   }
-  
-  @media (min-width: ${({ theme }) => theme.breakpoints.xl}) {
+
+  @media (min-width: ${({ theme }) => theme.breakpoints[3]}) {
     max-width: ${({ theme }) => theme.sizes.container.xl};
   }
 `;

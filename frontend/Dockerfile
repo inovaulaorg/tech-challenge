@@ -1,24 +1,25 @@
-FROM node:18-alpine
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
-
-# Install dependencies
 RUN npm ci --silent
 
-# Copy source code
 COPY . .
-
-# Build the application
 RUN npm run build
 
-# Install serve to run the app
-RUN npm install -g serve
+FROM node:18-alpine AS production
 
-# Expose port
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production --silent
+
+COPY --from=builder /app/build ./build
+
 EXPOSE 3000
 
-# Start the application
-CMD ["serve", "-s", "build", "-l", "3000"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:3000/ || exit 1
+
+CMD ["npx", "serve", "-s", "build", "-l", "3000"]

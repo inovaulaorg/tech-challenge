@@ -9,6 +9,7 @@ export interface User {
   lastLogin?: string;
   createdAt: string;
   updatedAt: string;
+  role?: string;
 }
 
 export interface Post {
@@ -19,12 +20,12 @@ export interface Post {
   imageUrl?: string;
   tags?: string[];
   isPublished: boolean;
-  publishedAt?: string;
+  publishedAt: string;
   viewCount: number;
   authorId: number;
   createdAt: string;
   updatedAt: string;
-  author?: User;
+  author: User;
   commentCount?: number;
   likeCount?: number;
   isLiked?: boolean;
@@ -109,6 +110,7 @@ export interface RegisterRequest {
   password: string;
   firstName?: string;
   lastName?: string;
+  avatar?: string;
 }
 
 export interface UploadResponse {

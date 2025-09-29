@@ -3,35 +3,41 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider } from 'styled-components';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { isAuthenticated } from './services/api';
 
 import { theme } from './styles/theme';
 import { GlobalStyle } from './styles/GlobalStyle';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { Layout } from './components/layout/Layout';
 import { LoginPage } from './pages/auth/LoginPage';
-// import { RegisterPage } from './pages/auth/RegisterPage';
-// import { HomePage } from './pages/posts/HomePage';
-// import { CreatePostPage } from './pages/posts/CreatePostPage';
-// import { PostDetailPage } from './pages/posts/PostDetailPage';
-
-// Simple placeholder components for now
-const RegisterPage = () => <div>Register Page - Coming Soon</div>;
-const HomePage = () => <div>Home Page - Coming Soon</div>;
-const CreatePostPage = () => <div>Create Post Page - Coming Soon</div>;
-const PostDetailPage = () => <div>Post Detail Page - Coming Soon</div>;
+import { RegisterPage } from './pages/auth/RegisterPage';
+import { HomePage } from './pages/main/HomePage';
+import { CreatePostPage } from './pages/posts/CreatePostPage';
+import { PostListPage } from './pages/posts/PostListPage';
+import { PostDetailPage } from './pages/posts/PostDetailPage';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
-  
+  const { isLoading, logout } = useAuth();
+
+  const authenticated = isAuthenticated();
+
+  React.useEffect(() => {
+    if (!authenticated) {
+      logout();
+    }
+  }, [authenticated, logout]);
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
-  
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+
+  return !authenticated
+    ? <Navigate to="/login" />
+    : <>{children}</>;
 };
 
 const PublicRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
@@ -59,7 +65,6 @@ const AppRoutes: React.FC = () => {
             </PublicRoute>
           } 
         />
-        
         <Route 
           path="/register" 
           element={
@@ -68,12 +73,27 @@ const AppRoutes: React.FC = () => {
             </PublicRoute>
           } 
         />
-        
         <Route 
           path="/create" 
           element={
             <ProtectedRoute>
               <CreatePostPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/posts" 
+          element={
+            <ProtectedRoute>
+              <PostListPage />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/post/:id" 
+          element={
+            <ProtectedRoute>
+              <PostDetailPage />
             </ProtectedRoute>
           } 
         />

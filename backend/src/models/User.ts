@@ -23,6 +23,17 @@ interface UserAttributes {
   updatedAt?: Date;
 }
 
+export interface UserUpdateAttributes {
+  username?: string;
+  email?: string;
+  password?: string;
+  firstName?: string;
+  lastName?: string;
+  avatar?: string;
+  lastLogin?: Date;
+  updatedAt?: Date;
+}
+
 interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'isActive' | 'createdAt' | 'updatedAt'> {}
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {

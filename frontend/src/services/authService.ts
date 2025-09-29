@@ -21,9 +21,4 @@ export const authService = {
     const response = await api.put<{ message: string; user: User }>('/auth/profile', userData);
     return response.data;
   },
-
-  logout(): void {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user_data');
-  },
 };

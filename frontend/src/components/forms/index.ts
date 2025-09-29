@@ -5,12 +5,21 @@ export const Form = styled.form`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.space[4]};
+
+  @media (max-width: 600px) {
+    gap: ${({ theme }) => theme.space[2]};
+    padding: ${({ theme }) => theme.space[2]};
+  }
 `;
 
 export const FormGroup = styled(Box)`
   display: flex;
   flex-direction: column;
   gap: ${({ theme }) => theme.space[2]};
+
+  @media (max-width: 600px) {
+    gap: ${({ theme }) => theme.space[1]};
+  }
 `;
 
 export const Label = styled(Text).attrs({ as: 'label', variant: 'label' })`
@@ -92,38 +101,32 @@ export const HelpText = styled(Text)`
 `;
 
 // Intentional CSS issue: File input styling problems
-export const FileInput = styled.input.attrs({ type: 'file' })`
-  /* This styling will look broken on different browsers */
-  width: 100%;
-  padding: ${({ theme }) => theme.space[3]};
-  border: 2px dashed ${({ theme }) => theme.colors.gray[300]};
-  border-radius: ${({ theme }) => theme.radii.md};
-  background-color: ${({ theme }) => theme.colors.gray[50]};
+export const HiddenFileInput = styled.input.attrs({ type: 'file' })`
+  display: none;
+`;
+
+export const CustomFileInputWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: ${({ theme }) => theme.space[3]};
+`;
+
+export const CustomFileButton = styled.button`
+  background: ${({ theme }) => theme.colors.primary[500]};
+  color: white;
+  border: none;
+  border-radius: ${({ theme }) => theme.radii.sm};
+  padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[4]};
   cursor: pointer;
-  font-size: 0; /* This will hide the filename text completely */
-  
-  /* This will cause layout issues */
-  &::file-selector-button {
-    margin-right: 20px;
-    border: none;
-    background: ${({ theme }) => theme.colors.primary[500]};
-    padding: ${({ theme }) => theme.space[2]} ${({ theme }) => theme.space[4]};
-    border-radius: ${({ theme }) => theme.radii.sm};
-    color: white;
-    cursor: pointer;
-    transition: background-color 0.2s ease-in-out;
-    font-size: ${({ theme }) => theme.fontSizes.sm};
-    /* Missing proper positioning and responsive design */
-  }
-  
-  &::file-selector-button:hover {
+  font-size: ${({ theme }) => theme.fontSizes.sm};
+  transition: background-color 0.2s ease-in-out;
+
+  &:hover {
     background: ${({ theme }) => theme.colors.primary[600]};
-    /* Expensive animation without optimization */
-    animation: file-button-hover 0.5s ease-in-out infinite alternate;
   }
-  
-  @keyframes file-button-hover {
-    from { transform: translateY(0px); }
-    to { transform: translateY(-2px); }
+
+  @media (max-width: 600px) {
+    padding: ${({ theme }) => theme.space[1]} ${({ theme }) => theme.space[2]};
+    font-size: ${({ theme }) => theme.fontSizes.xs};
   }
 `;

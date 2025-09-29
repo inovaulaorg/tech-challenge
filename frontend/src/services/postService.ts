@@ -14,6 +14,7 @@ export interface PostQuery {
   search?: string;
   tags?: string;
   authorId?: number;
+  published?: boolean;
 }
 
 export const postService = {
@@ -35,8 +36,8 @@ export const postService = {
     return response.data;
   },
 
-  async createPost(postData: CreatePostRequest): Promise<{ message: string; post: Post }> {
-    const response = await api.post<{ message: string; post: Post }>('/posts', postData);
+  async createPost(data: CreatePostRequest): Promise<{ message: string; post: Post }> {
+    const response = await api.post<{ message: string; post: Post }>('/posts', data);
     return response.data;
   },
 
@@ -51,7 +52,7 @@ export const postService = {
   },
 
   async likePost(id: number): Promise<{ message: string; liked: boolean }> {
-    const response = await api.post<{ message: string; liked: boolean }>(`/posts/${id}/like`);
+    const response = await api.post<{ message: string; liked: boolean }>(`/posts/like/${id}`);
     return response.data;
-  },
+  }
 };

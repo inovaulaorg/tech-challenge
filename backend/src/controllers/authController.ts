@@ -1,12 +1,13 @@
 import { Request, Response } from "express";
 import { Op } from "sequelize";
 import { Post, User } from "../models";
+import { UserUpdateAttributes } from "../models/User";
 import {
   AuthenticatedRequest,
   CreateUserRequest,
   LoginRequest,
 } from "../types";
-import { generateToken } from "../utils/jwt";
+import { generateToken, generateRefreshToken } from "../utils/jwt";
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -16,7 +17,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       password,
       firstName,
       lastName,
-    }: CreateUserRequest = req.body;
+      avatar,
+    }: CreateUserRequest & { avatar?: string } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({
@@ -39,13 +41,19 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       password,
       firstName,
       lastName,
+      avatar,
     });
 
-    // Generate token
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      username: user.username,
+    const tokenPayload = { id: user.id, email: user.email, username: user.username };
+    const token = generateToken(tokenPayload);
+    const refreshToken = generateRefreshToken(tokenPayload);
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.status(201).json({
@@ -82,10 +90,16 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     await user.save();
 
     // Generate token
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      username: user.username,
+    const tokenPayload = { id: user.id, email: user.email, username: user.username };
+    const token = generateToken(tokenPayload);
+    const refreshToken = generateRefreshToken(tokenPayload);
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     res.status(200).json({
@@ -98,6 +112,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const logout = async (req: Request, res: Response) => {
+  res.clearCookie('refreshToken', { path: '/' });
+  res.status(200).json({ message: 'Logout successful' });
+}
 
 export const getProfile = async (
   req: AuthenticatedRequest,
@@ -149,13 +168,18 @@ export const updateProfile = async (
       return;
     }
 
-    const { firstName, lastName, avatar } = req.body;
+    const { username, email, password, firstName, lastName, avatar } = req.body;
 
-    await user.update({
-      firstName,
-      lastName,
-      avatar,
-    });
+    const updateData: UserUpdateAttributes = { updatedAt: new Date() };
+
+    if (firstName !== undefined) updateData.firstName = firstName;
+    if (lastName !== undefined) updateData.lastName = lastName;
+    if (username !== undefined) updateData.username = username;
+    if (email !== undefined) updateData.email = email;
+    if (password !== undefined) updateData.password = password;
+    if (avatar !== undefined) updateData.avatar = avatar;
+
+    await user.update(updateData);
 
     res.status(200).json({
       message: "Profile updated successfully",
@@ -163,6 +187,35 @@ export const updateProfile = async (
     });
   } catch (error) {
     console.error("Update profile error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const deleteUser = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ error: "User not authenticated" });
+      return;
+    }
+
+    const userId = req.user.id;
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    await user.destroy();
+
+    res.status(200).json({
+      message: "User deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete user error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };

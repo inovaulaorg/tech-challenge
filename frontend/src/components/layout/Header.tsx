@@ -93,8 +93,8 @@ export const Header: React.FC = () => {
             TechBlog
           </Logo>
           
-          <Flex alignItems="center" gap={4}>
-            <NavLink to="/">Posts</NavLink>
+          <Flex alignItems="center" style={{ gap: '1rem' }}>
+            <NavLink to="/posts">Posts</NavLink>
             
             {isAuthenticated ? (
               <>
@@ -102,10 +102,14 @@ export const Header: React.FC = () => {
                 <UserMenu>
                   <UserButton>
                     <Avatar>
-                      {user?.username?.charAt(0)?.toUpperCase() || 'U'}
+                      {user && user.username && user.username.length > 0
+                        ? user.username.charAt(0).toUpperCase()
+                        : 'U'}
                     </Avatar>
                     <Text fontSize="sm" color="gray.600">
-                      {user?.username}
+                      {user && user.username && user.username.length > 0
+                        ? user.username
+                        : 'None'}
                     </Text>
                   </UserButton>
                 </UserMenu>

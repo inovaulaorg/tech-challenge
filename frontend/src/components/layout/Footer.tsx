@@ -28,7 +28,7 @@ export const Footer: React.FC = () => {
             flexDirection={['column', 'row']} 
             justifyContent="space-between" 
             alignItems={['flex-start', 'center']}
-            gap={4}
+            style={{ gap: '1rem' }}
           >
             <Box>
               <Text fontSize="lg" fontWeight="bold" color="white" mb={2}>
@@ -39,7 +39,7 @@ export const Footer: React.FC = () => {
               </Text>
             </Box>
             
-            <Flex gap={6}>
+            <Flex style={{ gap: '1.5rem' }}>
               <FooterLink href="#about">About</FooterLink>
               <FooterLink href="#privacy">Privacy</FooterLink>
               <FooterLink href="#terms">Terms</FooterLink>
@@ -47,16 +47,16 @@ export const Footer: React.FC = () => {
             </Flex>
           </Flex>
           
-          <Box 
-            borderTop="1px solid" 
-            borderColor="gray.700" 
-            pt={4} 
-            mt={8}
-          >
-            <Text fontSize="sm" color="gray.400" textAlign="center">
-              © {new Date().getFullYear()} TechBlog. All rights reserved.
-            </Text>
-          </Box>
+        <Box 
+          borderTop="1px solid" 
+          borderColor="gray.700" 
+          pt={4} 
+          mt={8}
+        >
+          <Text fontSize="sm" color="gray.400" textAlign="center">
+            © {new Date().getFullYear()} TechBlog. All rights reserved.
+          </Text>
+        </Box>
         </Box>
       </Container>
     </FooterContainer>

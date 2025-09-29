@@ -138,7 +138,7 @@ export const updateComment = async (req: AuthenticatedRequest, res: Response): P
       return;
     }
 
-    await comment.update({ content });
+    await comment.update({ content: content });
 
     const updatedComment = await Comment.findByPk(comment.id, {
       include: [

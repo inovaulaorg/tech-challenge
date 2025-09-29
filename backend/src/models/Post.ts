@@ -54,6 +54,7 @@ class Post extends Model<PostAttributes, PostCreationAttributes> implements Post
   };
 
   // Intentionally inefficient method that will cause N+1 queries
+  // Not used due to its inefficiency
   public async getCommentsWithAuthors(): Promise<any[]> {
     const comments = await this.getComments();
     const commentsWithAuthors = [];

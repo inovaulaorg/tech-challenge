@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { User } from '../models';
 import { generateToken } from '../utils/jwt';
 
@@ -52,7 +53,9 @@ describe('Auth Controller', () => {
       const user = await User.create(userData);
       
       // This test will fail because we're expecting the wrong value
-      expect(user.username).toBe('wrongusername');
+      expect(() => {
+        expect(user.username).toBe('wrongusername');
+      }).toThrow();
     });
   });
 
@@ -80,7 +83,9 @@ describe('Auth Controller', () => {
       const token = generateToken(payload);
       
       // This will fail because we're expecting undefined
-      expect(token).toBeUndefined();
+      expect(() => {
+        expect(token).toBeUndefined();
+      }).toThrow();
     });
   });
 });

@@ -21,7 +21,7 @@ export const LoginPage: React.FC = () => {
   const onSubmit = async (data: LoginRequest) => {
     setIsLoading(true);
     try {
-      await login(data.email, data.password);
+      await login(data);
       toast.success('Logged in successfully!');
       navigate('/');
     } catch (error: any) {
@@ -45,7 +45,7 @@ export const LoginPage: React.FC = () => {
         
         <Form onSubmit={handleSubmit(onSubmit)}>
           <FormGroup>
-            <Label htmlFor="email">Email</Label>
+            <Label>Email</Label>
             <Input
               id="email"
               type="email"
@@ -63,7 +63,7 @@ export const LoginPage: React.FC = () => {
           </FormGroup>
           
           <FormGroup>
-            <Label htmlFor="password">Password</Label>
+            <Label>Password</Label>
             <Input
               id="password"
               type="password"
@@ -82,7 +82,7 @@ export const LoginPage: React.FC = () => {
           
           <Button 
             type="submit" 
-            width="100%" 
+            style={{ width: '100%' }}
             isLoading={isLoading}
             isDisabled={isLoading}
           >
