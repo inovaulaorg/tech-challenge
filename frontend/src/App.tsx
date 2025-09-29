@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { ToastContainer } from 'react-toastify';
@@ -9,16 +9,12 @@ import { GlobalStyle } from './styles/GlobalStyle';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { Layout } from './components/layout/Layout';
 import { LoginPage } from './pages/auth/LoginPage';
-// import { RegisterPage } from './pages/auth/RegisterPage';
-// import { HomePage } from './pages/posts/HomePage';
-// import { CreatePostPage } from './pages/posts/CreatePostPage';
-// import { PostDetailPage } from './pages/posts/PostDetailPage';
+import { RegisterPage } from './pages/auth/RegisterPage';
+import { CreatePostPage } from './pages/posts/CreatePostPage';
+import { PostDetailPage } from './pages/posts/PostDetailPage';
+import { EditPostPage } from './pages/posts/EditPostPage';
 
-// Simple placeholder components for now
-const RegisterPage = () => <div>Register Page - Coming Soon</div>;
-const HomePage = () => <div>Home Page - Coming Soon</div>;
-const CreatePostPage = () => <div>Create Post Page - Coming Soon</div>;
-const PostDetailPage = () => <div>Post Detail Page - Coming Soon</div>;
+const HomePage = lazy(() => import('./pages/posts/HomePage'));
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -47,7 +43,8 @@ const PublicRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
 const AppRoutes: React.FC = () => {
   return (
     <Layout>
-      <Routes>
+      <Suspense fallback={<div>Loading Page...</div>}>
+        <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/post/:id" element={<PostDetailPage />} />
         
@@ -77,9 +74,19 @@ const AppRoutes: React.FC = () => {
             </ProtectedRoute>
           } 
         />
+
+        <Route 
+            path="/post/:id/edit" 
+            element={
+              <ProtectedRoute>
+                <EditPostPage />
+              </ProtectedRoute>
+            } 
+          />
         
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
+        </Suspense>
     </Layout>
   );
 };

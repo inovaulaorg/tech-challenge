@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { Op } from 'sequelize';
 import { Post, User, Comment, Like } from '../models';
 import { AuthenticatedRequest, CreatePostRequest, UpdatePostRequest, PostQuery } from '../types';
+import { sequelize } from '../config/database';
 
 export const getPosts = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -14,6 +15,7 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
       tags,
       authorId,
     }: PostQuery = req.query;
+    const userId = req.user?.id;
 
     const pageNumber = parseInt(page);
     const limitNumber = parseInt(limit);
@@ -29,62 +31,61 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
         { content: { [Op.iLike]: `%${search}%` } },
       ];
     }
-
     if (tags) {
       const tagArray = tags.split(',').map(tag => tag.trim());
-      whereClause.tags = {
-        [Op.overlap]: tagArray,
-      };
+      whereClause.tags = { [Op.overlap]: tagArray };
     }
-
     if (authorId) {
       whereClause.authorId = parseInt(authorId);
     }
 
-    // Intentional N+1 query problem: This will cause performance issues
-    const posts = await Post.findAndCountAll({
+    const { count, rows: posts } = await Post.findAndCountAll({
       where: whereClause,
       limit: limitNumber,
       offset,
       order: [[sortBy, sortOrder]],
+      attributes: {
+        // CORREÇÃO: Adicionamos subqueries para calcular os likes no banco de dados
+        include: [
+          [
+            sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM likes AS "like"
+              WHERE "like"."postId" = "Post"."id"
+            )`),
+            'likesCount'
+          ],
+          [
+            sequelize.literal(`(
+              SELECT COUNT(*) > 0
+              FROM likes AS "userLike"
+              WHERE "userLike"."postId" = "Post"."id" AND "userLike"."userId" = ${userId || 'NULL'}
+            )`),
+            'isLikedByCurrentUser'
+          ]
+        ]
+      },
       include: [
         {
           model: User,
           as: 'author',
           attributes: ['id', 'username', 'avatar'],
-        },
-        // Missing eager loading for comments and likes - will cause N+1 queries
+        }
       ],
+      distinct: true,
     });
 
-    // Intentionally inefficient: Making separate queries for each post
-    const postsWithCounts = await Promise.all(
-      posts.rows.map(async (post) => {
-        const commentCount = await Comment.count({ where: { postId: post.id } });
-        const likeCount = await Like.count({ where: { postId: post.id } });
-        const isLiked = req.user 
-          ? await Like.findOne({ where: { postId: post.id, userId: req.user.id } }) !== null
-          : false;
-
-        return {
-          ...post.toJSON(),
-          commentCount,
-          likeCount,
-          isLiked,
-        };
-      })
-    );
-
     res.status(200).json({
-      posts: postsWithCounts,
+      posts: posts, // Não precisamos mais do map, os dados já vêm corretos
       pagination: {
         currentPage: pageNumber,
-        totalPages: Math.ceil(posts.count / limitNumber),
-        totalItems: posts.count,
-        hasNextPage: pageNumber < Math.ceil(posts.count / limitNumber),
+        totalPages: Math.ceil(count / limitNumber),
+        totalItems: count,
+        hasNextPage: pageNumber < Math.ceil(count / limitNumber),
         hasPrevPage: pageNumber > 1,
       },
     });
+    
   } catch (error) {
     console.error('Get posts error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -94,14 +95,46 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
 export const getPostById = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const userId = req.user?.id;
 
     const post = await Post.findByPk(parseInt(id), {
+      attributes: {
+        // CORREÇÃO: Mesma lógica de subquery da função getPosts
+        include: [
+          [
+            sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM likes AS "like"
+              WHERE "like"."postId" = "Post"."id"
+            )`),
+            'likesCount'
+          ],
+          [
+            sequelize.literal(`(
+              SELECT COUNT(*) > 0
+              FROM likes AS "userLike"
+              WHERE "userLike"."postId" = "Post"."id" AND "userLike"."userId" = ${userId || 'NULL'}
+            )`),
+            'isLikedByCurrentUser'
+          ]
+        ]
+      },
       include: [
         {
           model: User,
           as: 'author',
           attributes: ['id', 'username', 'firstName', 'lastName', 'avatar'],
         },
+        {
+          model: Comment,
+          as: 'comments',
+          include: [{
+            model: User,
+            as: 'author',
+            attributes: ['id', 'username', 'avatar']
+          }],
+          order: [['createdAt', 'DESC']]
+        }
       ],
     });
 
@@ -110,26 +143,13 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
 
-    // Increment view count
+    // A contagem de views permanece igual
     post.viewCount += 1;
     await post.save();
-
-    // Intentional N+1 query problem: Get comments with authors inefficiently
-    const commentsWithAuthors = await post.getCommentsWithAuthors();
     
-    const likeCount = await Like.count({ where: { postId: post.id } });
-    const isLiked = req.user 
-      ? await Like.findOne({ where: { postId: post.id, userId: req.user.id } }) !== null
-      : false;
+    // As chamadas ineficientes para Like.count e Like.findOne foram removidas
+    res.status(200).json({ post });
 
-    res.status(200).json({
-      post: {
-        ...post.toJSON(),
-        comments: commentsWithAuthors,
-        likeCount,
-        isLiked,
-      },
-    });
   } catch (error) {
     console.error('Get post by id error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -192,7 +212,6 @@ export const updatePost = async (req: AuthenticatedRequest, res: Response): Prom
       return;
     }
 
-    // Check if user is the author
     if (post.authorId !== req.user.id) {
       res.status(403).json({ error: 'Not authorized to update this post' });
       return;
@@ -241,7 +260,6 @@ export const deletePost = async (req: AuthenticatedRequest, res: Response): Prom
       return;
     }
 
-    // Check if user is the author
     if (post.authorId !== req.user.id) {
       res.status(403).json({ error: 'Not authorized to delete this post' });
       return;
