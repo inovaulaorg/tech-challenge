@@ -3,22 +3,18 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider } from 'styled-components';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
 import { theme } from './styles/theme';
 import { GlobalStyle } from './styles/GlobalStyle';
-import { AuthProvider, useAuth } from './hooks/useAuth';
+import { useAuth } from './hooks/useAuth';
+import { AuthProvider } from './context/AuthProvider';
 import { Layout } from './components/layout/Layout';
-import { LoginPage } from './pages/auth/LoginPage';
-// import { RegisterPage } from './pages/auth/RegisterPage';
-// import { HomePage } from './pages/posts/HomePage';
-// import { CreatePostPage } from './pages/posts/CreatePostPage';
-// import { PostDetailPage } from './pages/posts/PostDetailPage';
+import { HomePage } from './pages/posts/HomePage';
+import { RegisterPage } from './pages/auth/RegisterPage';
+import { CreatePostPage } from './pages/posts/CreatePostPage';
+import { PostsPage } from './pages/posts/PostsPage';
+import { PostDetailPage } from './pages/posts/PostDetailPage';
+import { ProfilePage } from './pages/auth/ProfilePage';
 
-// Simple placeholder components for now
-const RegisterPage = () => <div>Register Page - Coming Soon</div>;
-const HomePage = () => <div>Home Page - Coming Soon</div>;
-const CreatePostPage = () => <div>Create Post Page - Coming Soon</div>;
-const PostDetailPage = () => <div>Post Detail Page - Coming Soon</div>;
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -26,21 +22,21 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
-  
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
-  
+
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 };
 
 const PublicRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
-  
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
-  
+
   return !isAuthenticated ? <>{children}</> : <Navigate to="/" />;
 };
 
@@ -48,37 +44,63 @@ const AppRoutes: React.FC = () => {
   return (
     <Layout>
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/post/:id" element={<PostDetailPage />} />
-        
-        <Route 
-          path="/login" 
+
+        <Route
+          path="/"
           element={
-            <PublicRoute>
-              <LoginPage />
-            </PublicRoute>
-          } 
+          <PublicRoute>
+            <HomePage />
+          </PublicRoute>
+          }
         />
-        
-        <Route 
-          path="/register" 
+
+        <Route path="/post/:id" element={<PostDetailPage />} />
+
+        <Route
+          path="/register"
           element={
             <PublicRoute>
               <RegisterPage />
             </PublicRoute>
-          } 
+          }
         />
-        
-        <Route 
-          path="/create" 
+
+        <Route
+          path="/profile/:id"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/create"
           element={
             <ProtectedRoute>
               <CreatePostPage />
             </ProtectedRoute>
-          } 
+          }
         />
-        
-        <Route path="*" element={<Navigate to="/" />} />
+
+        <Route
+          path="/posts"
+          element={
+            <ProtectedRoute>
+              <PostsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/posts/:id"
+          element={
+            <ProtectedRoute>
+              <PostDetailPage />
+            </ProtectedRoute>
+          }
+        />
+
       </Routes>
     </Layout>
   );

@@ -5,6 +5,7 @@ import {
   AuthenticatedRequest,
   CreateUserRequest,
   LoginRequest,
+  UpdateProfileRequest
 } from "../types";
 import { generateToken } from "../utils/jwt";
 
@@ -27,7 +28,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     if (existingUser) {
       res.status(409).json({
-        error: "User already exists with this email or username",
+        error: "Invalid credentials", // Deixando mensagem genérica por segurança
       });
       return;
     }
@@ -48,11 +49,19 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       username: user.username,
     });
 
+    // Resposta otimizada para evitar expor tudo o que o sequelize retorna
     res.status(201).json({
-      message: "User created successfully",
-      user: user.toJSON(),
-      token,
-    });
+    message: "User created successfully",
+    user: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName
+    },
+    token,
+  });
+
   } catch (error) {
     console.error("Registration error:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -88,9 +97,16 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       username: user.username,
     });
 
+    // Resposta otimizada para evitar expor tudo o que o sequelize retorna
     res.status(200).json({
       message: "Login successful",
-      user: user.toJSON(),
+      user: {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName
+      },
       token,
     });
   } catch (error) {
@@ -137,7 +153,11 @@ export const updateProfile = async (
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> => {
+
   try {
+
+    const { firstName, lastName, avatar }: UpdateProfileRequest = req.body;
+
     if (!req.user) {
       res.status(401).json({ error: "User not authenticated" });
       return;
@@ -148,8 +168,6 @@ export const updateProfile = async (
       res.status(404).json({ error: "User not found" });
       return;
     }
-
-    const { firstName, lastName, avatar } = req.body;
 
     await user.update({
       firstName,

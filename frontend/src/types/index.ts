@@ -26,7 +26,7 @@ export interface Post {
   updatedAt: string;
   author?: User;
   commentCount?: number;
-  likeCount?: number;
+  likeCount: number;
   isLiked?: boolean;
   comments?: Comment[];
 }

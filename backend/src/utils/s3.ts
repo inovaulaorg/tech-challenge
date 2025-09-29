@@ -13,7 +13,7 @@ export const uploadToS3 = (
   folder: string = 'uploads'
 ): Promise<S3UploadResult> => {
   const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}-${file.originalname}`;
-  
+
   const uploadParams = {
     Bucket: process.env.AWS_S3_BUCKET || 'tech-challenge-blog-uploads',
     Key: fileName,

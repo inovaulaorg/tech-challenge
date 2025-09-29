@@ -1,4 +1,5 @@
 module.exports = {
+  maxWorkers: '50%',
   preset: 'ts-jest',
   testEnvironment: 'node',
   roots: ['<rootDir>/src'],
@@ -9,10 +10,7 @@ module.exports = {
   collectCoverage: true,
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov', 'html'],
-  collectCoverageFrom: [
-    'src/**/*.ts',
-    '!src/**/*.d.ts',
-    '!src/tests/**',
-  ],
+  collectCoverageFrom: [],
   setupFilesAfterEnv: ['<rootDir>/src/tests/setup.ts'],
+  watchPlugins: [],
 };

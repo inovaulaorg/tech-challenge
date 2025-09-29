@@ -1,3 +1,9 @@
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Carrega .env na raiz do projeto
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -34,8 +40,8 @@ app.use('/api/', limiter);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'OK', 
+  res.status(200).json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
@@ -56,7 +62,7 @@ const startServer = async () => {
   try {
     await sequelize.authenticate();
     console.log('✅ Database connection established successfully');
-    
+
     if (process.env.NODE_ENV !== 'production') {
       await sequelize.sync({ force: false });
       console.log('📊 Database synchronized');

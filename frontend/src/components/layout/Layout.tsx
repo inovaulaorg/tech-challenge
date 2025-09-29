@@ -1,6 +1,5 @@
 import React from 'react';
 import styled from 'styled-components';
-import { Box } from '../ui';
 import { Header } from './Header';
 import { Footer } from './Footer';
 
@@ -12,7 +11,7 @@ const LayoutContainer = styled.div`
 
 const Main = styled.main`
   flex: 1;
-  padding: ${({ theme }) => theme.space[8]} 0;
+  padding: 0;
 `;
 
 interface LayoutProps {

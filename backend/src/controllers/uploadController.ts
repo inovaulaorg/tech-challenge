@@ -3,13 +3,9 @@ import multer from 'multer';
 import AWS from 'aws-sdk';
 import { AuthenticatedRequest } from '../types';
 import { uploadToS3, deleteFromS3 } from '../utils/s3';
+import { encode } from 'punycode';
 
-// Configure AWS S3
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION || 'us-east-1',
-});
+// const s3 nunca usada, mantida apenas no s3.ts
 
 // Multer configuration for memory storage
 const memoryStorage = multer.memoryStorage();
@@ -17,7 +13,7 @@ const memoryStorage = multer.memoryStorage();
 // File filter function
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
-  
+
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
@@ -70,7 +66,7 @@ export const uploadImage = async (req: AuthenticatedRequest, res: Response): Pro
     });
   } catch (error) {
     console.error('Upload error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Upload failed',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -104,7 +100,7 @@ export const uploadImageDirect = async (req: AuthenticatedRequest, res: Response
     });
   } catch (error) {
     console.error('Upload error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Upload failed',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
@@ -120,7 +116,7 @@ export const deleteImage = async (req: AuthenticatedRequest, res: Response): Pro
     }
 
     const { key } = req.params;
-    
+
     if (!key) {
       res.status(400).json({ error: 'File key is required' });
       return;
@@ -133,7 +129,7 @@ export const deleteImage = async (req: AuthenticatedRequest, res: Response): Pro
     });
   } catch (error) {
     console.error('Delete error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Delete failed',
       message: error instanceof Error ? error.message : 'Unknown error'
     });

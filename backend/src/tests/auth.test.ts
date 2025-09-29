@@ -1,5 +1,7 @@
 import { User } from '../models';
 import { generateToken } from '../utils/jwt';
+import { expect, describe, beforeEach, it} from '@jest/globals';
+import jwt from 'jsonwebtoken';
 
 describe('Auth Controller', () => {
   beforeEach(async () => {
@@ -17,12 +19,17 @@ describe('Auth Controller', () => {
       };
 
       const user = await User.create(userData);
-      
+
+      // Validar campos obrigatórios
+      expect(user.id).toBeDefined();
+      expect(user.createdAt).toBeInstanceOf(Date);
       expect(user.username).toBe(userData.username);
       expect(user.email).toBe(userData.email);
       expect(user.firstName).toBe(userData.firstName);
       expect(user.lastName).toBe(userData.lastName);
-      expect(user.password).not.toBe(userData.password); // Should be hashed
+
+      // Senha deve ser hash
+      expect(user.password).not.toBe(userData.password);
     });
 
     it('should validate password correctly', async () => {
@@ -33,31 +40,30 @@ describe('Auth Controller', () => {
       };
 
       const user = await User.create(userData);
-      
-      const isValid = await user.validatePassword('password123');
-      const isInvalid = await user.validatePassword('wrongpassword');
-      
-      expect(isValid).toBe(true);
-      expect(isInvalid).toBe(false);
+
+      expect(await user.validatePassword('password123')).toBe(true);
+      expect(await user.validatePassword('wrongpassword')).toBe(false);
     });
 
-    // Intentionally broken test
-    it('should fail - broken test example', async () => {
-      const userData = {
-        username: 'testuser',
-        email: 'test@example.com',
-        password: 'password123',
-      };
+    it('should throw an error if username is missing', async () => {
+      await expect(
+        User.create({
+          email: 'a@b.com', password: '123',
+          username: ''
+        })
+      ).rejects.toThrow();
+    });
 
-      const user = await User.create(userData);
-      
-      // This test will fail because we're expecting the wrong value
-      expect(user.username).toBe('wrongusername');
+    it('should throw an error if username is empty', async () => {
+      await expect(
+        User.create({ username: 'abc', email: 'invalid-email', password: '123' })
+      ).rejects.toThrow();
     });
   });
 
+
   describe('JWT Token', () => {
-    it('should generate and verify token correctly', () => {
+    it('should generate a token string', () => {
       const payload = {
         id: 1,
         email: 'test@example.com',
@@ -65,12 +71,12 @@ describe('Auth Controller', () => {
       };
 
       const token = generateToken(payload);
+
       expect(token).toBeDefined();
       expect(typeof token).toBe('string');
     });
 
-    // Intentionally broken test
-    it('should fail - broken JWT test', () => {
+    it('should encode and decode payload correctly', () => {
       const payload = {
         id: 1,
         email: 'test@example.com',
@@ -78,9 +84,12 @@ describe('Auth Controller', () => {
       };
 
       const token = generateToken(payload);
-      
-      // This will fail because we're expecting undefined
-      expect(token).toBeUndefined();
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret') as any;
+
+      expect(decoded.id).toBe(payload.id);
+      expect(decoded.email).toBe(payload.email);
+      expect(decoded.username).toBe(payload.username);
     });
   });
 });

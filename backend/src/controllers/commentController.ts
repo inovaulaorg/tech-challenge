@@ -12,6 +12,12 @@ export const getComments = async (req: AuthenticatedRequest, res: Response): Pro
     const limitNumber = parseInt(limit as string);
     const offset = (pageNumber - 1) * limitNumber;
 
+    // Certificando tipagem no where
+    const where = {
+      postId: parseInt(postId, 10),
+      parentId: { [Op.is]: null },
+    };
+
     // Check if post exists
     const post = await Post.findByPk(parseInt(postId));
     if (!post) {
@@ -20,10 +26,7 @@ export const getComments = async (req: AuthenticatedRequest, res: Response): Pro
     }
 
     const comments = await Comment.findAndCountAll({
-      where: { 
-        postId: parseInt(postId),
-        parentId: null
-      } as any, // Type assertion to bypass strict typing for demo
+      where,
       limit: limitNumber,
       offset,
       order: [['createdAt', 'DESC']],

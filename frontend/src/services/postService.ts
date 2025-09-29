@@ -1,9 +1,9 @@
 import api from './api';
-import { 
-  Post, 
-  PostsResponse, 
-  CreatePostRequest, 
-  UpdatePostRequest 
+import {
+  Post,
+  PostsResponse,
+  CreatePostRequest,
+  UpdatePostRequest
 } from '../types';
 
 export interface PostQuery {
@@ -12,20 +12,21 @@ export interface PostQuery {
   sortBy?: string;
   sortOrder?: 'ASC' | 'DESC';
   search?: string;
-  tags?: string;
+  tags?: string[];
   authorId?: number;
+  isPublished?: boolean;
 }
 
 export const postService = {
   async getPosts(query: PostQuery = {}): Promise<PostsResponse> {
     const params = new URLSearchParams();
-    
+
     Object.entries(query).forEach(([key, value]) => {
       if (value !== undefined) {
         params.append(key, value.toString());
       }
     });
-    
+
     const response = await api.get<PostsResponse>(`/posts?${params.toString()}`);
     return response.data;
   },

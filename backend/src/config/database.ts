@@ -1,32 +1,51 @@
 import { Sequelize } from 'sequelize';
-import dotenv from 'dotenv';
 
-dotenv.config();
+// Validação de variáveis essenciais
+const requiredEnv = [
+  'DB_HOST',
+  'DB_NAME',
+  'DB_USER',
+  'DB_PASSWORD',
+  'DB_PORT',
+];
+
+requiredEnv.forEach((key) => {
+  if (!process.env[key]) {
+    console.error(`❌ Missing environment variable: ${key}`);
+    process.exit(1);
+  }
+});
+
+// Pool otimizado
+const pool = {
+  max: process.env.NODE_ENV === 'production' ? 20 : 10,
+  min: process.env.NODE_ENV === 'production' ? 2 : 0,
+  acquire: 30000,
+  idle: 10000,
+  evict: 10000,
+};
+
+// SSL condicional para produção
+const dialectOptions =
+  process.env.NODE_ENV === 'production'
+    ? {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false,
+        },
+      }
+    : {};
 
 const sequelize = new Sequelize({
-  database: process.env.DB_NAME || 'tech_challenge_blog',
-  username: process.env.DB_USER || 'admin',
-  password: process.env.DB_PASSWORD || 'password123',
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
+  database: process.env.DB_NAME,
+  username: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT as string, 10),
   dialect: 'postgres',
   logging: process.env.NODE_ENV === 'development' ? console.log : false,
-  pool: {
-    max: 10,
-    min: 0,
-    acquire: 30000,
-    idle: 10000,
-  },
-  // Intentional performance issue: missing connection pool optimization
-  dialectOptions: {
-    // Missing SSL configuration for production
-    ...(process.env.NODE_ENV === 'production' && {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    })
-  }
+  pool,
+  dialectOptions,
 });
 
 export { sequelize };

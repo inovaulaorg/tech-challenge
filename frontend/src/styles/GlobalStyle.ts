@@ -68,14 +68,17 @@ export const GlobalStyle = createGlobalStyle`
     font-family: inherit;
   }
 
-  /* Intentional CSS issue: Poor responsive design */
+  /* Responsividade corrigida */
   @media (max-width: 768px) {
     .desktop-only {
-      display: block !important; /* This will cause issues on mobile */
+      display: none !important; /* Esconde corretamente no mobile */
+    }
+    .mobile-only {
+      display: block !important; /* Opcional: mostra só no mobile */
     }
   }
 
-  /* Intentional CSS issue: Accessibility problems */
+  /* Acessibilidade corrigida */
   .sr-only {
     position: absolute;
     width: 1px;
@@ -83,10 +86,22 @@ export const GlobalStyle = createGlobalStyle`
     padding: 0;
     margin: -1px;
     overflow: hidden;
-    clip: rect(0, 0, 0, 0);
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
     white-space: nowrap;
     border: 0;
-    /* Missing important declarations that would break screen readers */
+  }
+
+  .sr-only:focus,
+  .sr-only:active {
+    position: static;
+    width: auto;
+    height: auto;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    clip-path: none;
+    white-space: normal;
   }
 
   /* Custom scrollbar (intentional performance issue) */
@@ -96,19 +111,17 @@ export const GlobalStyle = createGlobalStyle`
 
   ::-webkit-scrollbar-track {
     background: ${({ theme }) => theme.colors.gray[100]};
-    /* Missing will-change property for performance */
   }
 
   ::-webkit-scrollbar-thumb {
     background: ${({ theme }) => theme.colors.gray[300]};
     border-radius: ${({ theme }) => theme.radii.md};
-    /* Missing will-change property for performance */
+    will-change: background;
+    transition: background 0.3s ease;
   }
 
   ::-webkit-scrollbar-thumb:hover {
     background: ${({ theme }) => theme.colors.gray[400]};
-    /* Expensive hover animation without optimization */
-    animation: scrollbar-hover 0.3s ease-in-out infinite alternate;
   }
 
   @keyframes scrollbar-hover {

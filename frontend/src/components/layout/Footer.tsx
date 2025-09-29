@@ -12,9 +12,9 @@ const FooterLink = styled.a`
   color: ${({ theme }) => theme.colors.gray[400]};
   text-decoration: none;
   transition: color 0.2s ease-in-out;
-  
+
   &:hover {
-    color: ${({ theme }) => theme.colors.white};
+    color: ${({ theme }) => theme.colors.primary};
     text-decoration: underline;
   }
 `;
@@ -24,21 +24,21 @@ export const Footer: React.FC = () => {
     <FooterContainer>
       <Container>
         <Box py={8}>
-          <Flex 
-            flexDirection={['column', 'row']} 
-            justifyContent="space-between" 
+          <Flex
+            flexDirection={['column', 'row']}
+            justifyContent="space-between"
             alignItems={['flex-start', 'center']}
             gap={4}
           >
             <Box>
-              <Text fontSize="lg" fontWeight="bold" color="white" mb={2}>
+              <Text fontSize="lg" fontWeight="bold" color="white" mr={2}>
                 TechBlog
               </Text>
               <Text fontSize="sm" color="gray.400">
                 A modern blog platform for developers
               </Text>
             </Box>
-            
+
             <Flex gap={6}>
               <FooterLink href="#about">About</FooterLink>
               <FooterLink href="#privacy">Privacy</FooterLink>
@@ -46,12 +46,15 @@ export const Footer: React.FC = () => {
               <FooterLink href="#contact">Contact</FooterLink>
             </Flex>
           </Flex>
-          
-          <Box 
-            borderTop="1px solid" 
-            borderColor="gray.700" 
-            pt={4} 
+
+          <Box
+            borderTop="1px solid"
+            borderColor="gray.700"
+            pt={4}
             mt={8}
+            display="flex"
+            justifyContent="center"
+            alignItems="center"
           >
             <Text fontSize="sm" color="gray.400" textAlign="center">
               © {new Date().getFullYear()} TechBlog. All rights reserved.
