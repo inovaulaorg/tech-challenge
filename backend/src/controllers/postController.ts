@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { Op } from 'sequelize';
+import { Op, fn, col} from 'sequelize';
 import { Post, User, Comment, Like } from '../models';
 import { AuthenticatedRequest, CreatePostRequest, UpdatePostRequest, PostQuery } from '../types';
 
@@ -40,43 +40,34 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
     if (authorId) {
       whereClause.authorId = parseInt(authorId);
     }
-
-    // Intentional N+1 query problem: This will cause performance issues
+    // Ajuste de n+1 queries
     const posts = await Post.findAndCountAll({
       where: whereClause,
       limit: limitNumber,
       offset,
       order: [[sortBy, sortOrder]],
+      distinct: true,
       include: [
         {
           model: User,
           as: 'author',
           attributes: ['id', 'username', 'avatar'],
         },
-        // Missing eager loading for comments and likes - will cause N+1 queries
+        {
+          model: Comment,
+          as: 'comments',
+          attributes: ['id'], // só para contar
+        },
+        {
+          model: Like,
+          as: 'likes',
+          attributes: ['id', 'userId'], // para contar e checar isLiked
+        },
       ],
     });
 
-    // Intentionally inefficient: Making separate queries for each post
-    const postsWithCounts = await Promise.all(
-      posts.rows.map(async (post) => {
-        const commentCount = await Comment.count({ where: { postId: post.id } });
-        const likeCount = await Like.count({ where: { postId: post.id } });
-        const isLiked = req.user 
-          ? await Like.findOne({ where: { postId: post.id, userId: req.user.id } }) !== null
-          : false;
-
-        return {
-          ...post.toJSON(),
-          commentCount,
-          likeCount,
-          isLiked,
-        };
-      })
-    );
-
     res.status(200).json({
-      posts: postsWithCounts,
+      posts: posts.rows,
       pagination: {
         currentPage: pageNumber,
         totalPages: Math.ceil(posts.count / limitNumber),
@@ -95,12 +86,31 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
   try {
     const { id } = req.params;
 
+    // Corrigido n+1 queries ineficiente
     const post = await Post.findByPk(parseInt(id), {
       include: [
         {
           model: User,
           as: 'author',
           attributes: ['id', 'username', 'firstName', 'lastName', 'avatar'],
+        },
+        {
+          model: Comment,
+          as: 'comments',
+          attributes: ['id', 'content', 'authorId', 'createdAt', 'parentId'],
+          include: [
+            {
+              model: User,
+              as: 'author',
+              attributes: ['id', 'username', 'avatar'],
+            },
+          ],
+          order: [['createdAt', 'ASC']],
+        },
+        {
+          model: Like,
+          as: 'likes',
+          attributes: ['id', 'userId'],
         },
       ],
     });
@@ -114,18 +124,17 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
     post.viewCount += 1;
     await post.save();
 
-    // Intentional N+1 query problem: Get comments with authors inefficiently
-    const commentsWithAuthors = await post.getCommentsWithAuthors();
-    
-    const likeCount = await Like.count({ where: { postId: post.id } });
-    const isLiked = req.user 
-      ? await Like.findOne({ where: { postId: post.id, userId: req.user.id } }) !== null
+    const commentCount = post.comments?.length ?? 0;
+    const likeCount = post.likes?.length ?? 0;
+    const isLiked = req.user
+      ? (post.likes as Array<{ userId: number }> ?? []).some((like) => like.userId === req.user!.id)
       : false;
 
     res.status(200).json({
       post: {
         ...post.toJSON(),
-        comments: commentsWithAuthors,
+        comments: post.comments,
+        commentCount,
         likeCount,
         isLiked,
       },
@@ -143,6 +152,8 @@ export const createPost = async (req: AuthenticatedRequest, res: Response): Prom
       return;
     }
 
+    const userId = req.user!.id;
+
     const { title, content, excerpt, imageUrl, tags }: CreatePostRequest = req.body;
 
     const post = await Post.create({
@@ -151,7 +162,7 @@ export const createPost = async (req: AuthenticatedRequest, res: Response): Prom
       excerpt,
       imageUrl,
       tags: tags || [],
-      authorId: req.user.id,
+      authorId: userId,
       isPublished: true,
       publishedAt: new Date(),
     });
@@ -183,6 +194,8 @@ export const updatePost = async (req: AuthenticatedRequest, res: Response): Prom
       return;
     }
 
+    const userId = req.user!.id;
+
     const { id } = req.params;
     const { title, content, excerpt, imageUrl, tags }: UpdatePostRequest = req.body;
 
@@ -193,7 +206,7 @@ export const updatePost = async (req: AuthenticatedRequest, res: Response): Prom
     }
 
     // Check if user is the author
-    if (post.authorId !== req.user.id) {
+    if (post.authorId !== userId) {
       res.status(403).json({ error: 'Not authorized to update this post' });
       return;
     }
@@ -233,6 +246,8 @@ export const deletePost = async (req: AuthenticatedRequest, res: Response): Prom
       return;
     }
 
+    const userId = req.user!.id;
+
     const { id } = req.params;
 
     const post = await Post.findByPk(parseInt(id));
@@ -242,7 +257,7 @@ export const deletePost = async (req: AuthenticatedRequest, res: Response): Prom
     }
 
     // Check if user is the author
-    if (post.authorId !== req.user.id) {
+    if (post.authorId !== userId) {
       res.status(403).json({ error: 'Not authorized to delete this post' });
       return;
     }
@@ -264,6 +279,8 @@ export const likePost = async (req: AuthenticatedRequest, res: Response): Promis
       res.status(401).json({ error: 'User not authenticated' });
       return;
     }
+    
+    const userId = req.user!.id;
 
     const { id } = req.params;
 
@@ -274,14 +291,14 @@ export const likePost = async (req: AuthenticatedRequest, res: Response): Promis
     }
 
     const existingLike = await Like.findOne({
-      where: { postId: post.id, userId: req.user.id },
+      where: { postId: post.id, userId: userId },
     });
 
     if (existingLike) {
       await existingLike.destroy();
       res.status(200).json({ message: 'Post unliked', liked: false });
     } else {
-      await Like.create({ postId: post.id, userId: req.user.id });
+      await Like.create({ postId: post.id, userId: userId });
       res.status(200).json({ message: 'Post liked', liked: true });
     }
   } catch (error) {
