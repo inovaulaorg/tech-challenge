@@ -19,6 +19,12 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
     const limitNumber = parseInt(limit);
     const offset = (pageNumber - 1) * limitNumber;
 
+    // whitelist para os parâmetros de ordenação para prevenir SQL Injection
+    const allowedSortBy = ['createdAt', 'title', 'viewCount'];
+    const allowedSortOrder = ['ASC', 'DESC'];
+    const finalSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'createdAt';
+    const finalSortOrder = allowedSortOrder.includes(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'DESC';
+
     const whereClause: any = { isPublished: true };
 
     if (search) {
@@ -27,11 +33,9 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
         { content: { [Op.iLike]: `%${search}%` } },
       ];
     }
-
     if (tags) {
       whereClause.tags = { [Op.overlap]: tags.split(',').map(tag => tag.trim()) };
     }
-
     if (authorId) {
       whereClause.authorId = parseInt(authorId);
     }
@@ -40,24 +44,14 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
       where: whereClause,
       limit: limitNumber,
       offset,
-      order: [[sortBy, sortOrder]],
+      order: [[finalSortBy, finalSortOrder]],
       include: [
-        {
-          model: User,
-          as: 'author',
-          attributes: ['id', 'username', 'avatar'],
-        },
+        { model: User, as: 'author', attributes: ['id', 'username', 'avatar'] },
       ],
       attributes: {
         include: [
-          [
-            Sequelize.literal('(SELECT COUNT(*) FROM "Comments" WHERE "Comments"."postId" = "Post"."id")'),
-            'commentCount',
-          ],
-          [
-            Sequelize.literal('(SELECT COUNT(*) FROM "Likes" WHERE "Likes"."postId" = "Post"."id")'),
-            'likeCount',
-          ],
+          [Sequelize.literal('(SELECT COUNT(*) FROM "Comments" WHERE "Comments"."postId" = "Post"."id")'), 'commentCount'],
+          [Sequelize.literal('(SELECT COUNT(*) FROM "Likes" WHERE "Likes"."postId" = "Post"."id")'), 'likeCount'],
         ],
       },
     });
@@ -92,6 +86,8 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
   }
 };
 
+// (as outras funções do controlador como getPostById, createPost, etc., permanecem as mesmas aqui)
+//a lógica de validação foi movida para o middleware, que é a prática recomendada.
 
 export const getPostById = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
@@ -130,18 +126,14 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
     }
 
     post.increment('viewCount');
-
-    // Type assertion to inform TypeScript about the included associations
+    
     const typedPost = post as Post & { likes: Like[]; comments: (Comment & { author: User })[] };
-
     const likeCount = typedPost.likes?.length || 0;
     const isLiked = req.user 
       ? typedPost.likes?.some((like: Like) => like.userId === req.user?.id) 
       : false;
 
     const postJSON = typedPost.toJSON();
-    
-    // Remove the full 'likes' array from the final response
     delete (postJSON as any).likes;
 
     res.status(200).json({
@@ -157,6 +149,7 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
 export const createPost = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user!.id;
+    // Os dados do body já foram validados pelo middleware
     const { title, content, excerpt, imageUrl, tags }: CreatePostRequest = req.body;
 
     const post = await Post.create({
