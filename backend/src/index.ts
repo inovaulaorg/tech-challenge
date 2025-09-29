@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -15,21 +15,61 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Rate limiting
-const limiter = rateLimit({
+export const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
+export const sanitizeInput = (req: Request, res: Response, next: NextFunction) => {
+  const sanitizeObject = (obj: any): any => {
+    if (typeof obj === 'string' || obj === null) return obj;
+
+    for (const key in obj) {
+      if (typeof obj[key] === 'string') {
+        obj[key] = obj[key]
+          .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+          .replace(/<[^>]*>/g, '')
+          .trim();
+      } else if (typeof obj[key] === 'object') {
+        obj[key] = sanitizeObject(obj[key]);
+      }
+    }
+    return obj
+  };
+
+  if (req.body) {
+    sanitizeObject(req.body);
+  }
+  next()
+};
+
+export const securityMiddleware = [
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        fontSrc: ["'self'", 'data:', "https:"],
+        imgSrc: ["'self'", 'data:', "https:"],
+      },
+    },
+  }),
+  cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+  })
+]
+
 // Middleware
-app.use(helmet());
 app.use(compression());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
-}));
+app.use(...securityMiddleware);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(sanitizeInput);
 app.use('/api/', limiter);
 
 // Health check endpoint

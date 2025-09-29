@@ -16,6 +16,12 @@ export interface CreateUserRequest {
   lastName?: string;
 }
 
+export interface UpdateUserRequest {
+  firstName?: string;
+  lastName?: string;
+  avatar?: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;
@@ -41,6 +47,19 @@ export interface CreateCommentRequest {
   content: string;
   postId: number;
   parentId?: number;
+}
+
+export interface CommentWithAuthor {
+  id: number;
+  content: string;
+  createdAt: Date;
+  updatedAt: Date;
+  author: {
+    id: number;
+    username: string;
+    avatar: string;
+  };
+  [key: string]: any;
 }
 
 export interface PaginationQuery {

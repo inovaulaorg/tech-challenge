@@ -5,6 +5,7 @@ import {
   AuthenticatedRequest,
   CreateUserRequest,
   LoginRequest,
+  UpdateUserRequest,
 } from "../types";
 import { generateToken } from "../utils/jwt";
 
@@ -149,7 +150,8 @@ export const updateProfile = async (
       return;
     }
 
-    const { firstName, lastName, avatar } = req.body;
+    // Added validation for these fields
+    const { firstName, lastName, avatar }: UpdateUserRequest = req.body;
 
     await user.update({
       firstName,

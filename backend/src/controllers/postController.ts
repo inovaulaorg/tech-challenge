@@ -41,7 +41,7 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
       whereClause.authorId = parseInt(authorId);
     }
 
-    // Intentional N+1 query problem: This will cause performance issues
+    // Fixed by including associations but still counting separately
     const posts = await Post.findAndCountAll({
       where: whereClause,
       limit: limitNumber,
@@ -53,27 +53,30 @@ export const getPosts = async (req: AuthenticatedRequest, res: Response): Promis
           as: 'author',
           attributes: ['id', 'username', 'avatar'],
         },
-        // Missing eager loading for comments and likes - will cause N+1 queries
+        {
+          model: Comment,
+          as: 'comments',
+          attributes: ['id'],
+        },
+        {
+          model: Like,
+          as: 'likes',
+          attributes: ['id', 'userId'],
+        },
       ],
+      distinct: true,
     });
 
-    // Intentionally inefficient: Making separate queries for each post
-    const postsWithCounts = await Promise.all(
-      posts.rows.map(async (post) => {
-        const commentCount = await Comment.count({ where: { postId: post.id } });
-        const likeCount = await Like.count({ where: { postId: post.id } });
-        const isLiked = req.user 
-          ? await Like.findOne({ where: { postId: post.id, userId: req.user.id } }) !== null
-          : false;
 
-        return {
-          ...post.toJSON(),
-          commentCount,
-          likeCount,
-          isLiked,
-        };
-      })
-    );
+    // Now we don't do other queries, just process the data we already have
+    const postsWithCounts = await Promise.all(posts.rows.map(async (post) => {
+      return {
+        ...post.toJSON(),
+        commentCount: post.comments?.length || 0,
+        likeCount: post.likes?.length || 0,
+        isLiked: req.user ? post.likes?.some((like: { userId: number; }) => like.userId === req.user!.id || false) : false,
+      }
+    }));
 
     res.status(200).json({
       posts: postsWithCounts,
@@ -110,11 +113,10 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response): Pro
       return;
     }
 
-    // Increment view count
-    post.viewCount += 1;
-    await post.save();
+    // Increment with increment method
+    Post.increment('viewCount', { by: 1, where: { id: post.id } });
 
-    // Intentional N+1 query problem: Get comments with authors inefficiently
+    // Fixed N+1 query problem by using optimized method
     const commentsWithAuthors = await post.getCommentsWithAuthors();
     
     const likeCount = await Like.count({ where: { postId: post.id } });
