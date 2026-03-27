@@ -24,6 +24,7 @@ interface PostAttributes {
   updatedAt?: Date;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface PostCreationAttributes extends Optional<PostAttributes, 'id' | 'isPublished' | 'viewCount' | 'createdAt' | 'updatedAt'> {}
 
 class Post extends Model<PostAttributes, PostCreationAttributes> implements PostAttributes {
@@ -53,22 +54,29 @@ class Post extends Model<PostAttributes, PostCreationAttributes> implements Post
     likes: Association<Post, any>;
   };
 
-  // Intentionally inefficient method that will cause N+1 queries
-  public async getCommentsWithAuthors(): Promise<any[]> {
-    const comments = await this.getComments();
-    const commentsWithAuthors = [];
-    
-    // N+1 Query Problem: This will make a separate query for each comment's author
-    for (const comment of comments) {
-      const author = await comment.getAuthor();
-      commentsWithAuthors.push({
-        ...comment.toJSON(),
-        author: author.toJSON()
-      });
-    }
-    
-    return commentsWithAuthors;
-  }
+}
+
+const tagsColumn = sequelize.getDialect() === 'postgres'
+  ? DataTypes.ARRAY(DataTypes.STRING)
+  : DataTypes.JSON;
+
+const postIndexes: any[] = [
+  {
+    fields: ['authorId'],
+  },
+  {
+    fields: ['isPublished'],
+  },
+  {
+    fields: ['publishedAt'],
+  },
+];
+
+if (sequelize.getDialect() === 'postgres') {
+  postIndexes.push({
+    fields: ['tags'],
+    using: 'gin',
+  });
 }
 
 Post.init(
@@ -101,7 +109,7 @@ Post.init(
       allowNull: true,
     },
     tags: {
-      type: DataTypes.ARRAY(DataTypes.STRING),
+      type: tagsColumn,
       allowNull: true,
       defaultValue: [],
     },
@@ -132,21 +140,7 @@ Post.init(
   {
     sequelize,
     tableName: 'posts',
-    indexes: [
-      {
-        fields: ['authorId'],
-      },
-      {
-        fields: ['isPublished'],
-      },
-      {
-        fields: ['publishedAt'],
-      },
-      {
-        fields: ['tags'],
-        using: 'gin',
-      },
-    ],
+    indexes: postIndexes,
   }
 );
 

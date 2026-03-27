@@ -1,21 +1,23 @@
-FROM node:18-alpine
-
+FROM node:18-alpine AS base
 WORKDIR /app
 
-# Copy package files
+FROM base AS deps
 COPY package*.json ./
+RUN npm ci
 
-# Install dependencies
-RUN npm ci --only=production
-
-# Copy source code
+FROM deps AS builder
 COPY . .
-
-# Build the application
 RUN npm run build
 
-# Expose port
+FROM base AS production
+ENV NODE_ENV=production
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/src ./src
+RUN addgroup -S nodeapp \
+	&& adduser -S nodeapp -G nodeapp \
+	&& chown -R nodeapp:nodeapp /app
+USER nodeapp
 EXPOSE 3001
-
-# Start the application
 CMD ["npm", "start"]

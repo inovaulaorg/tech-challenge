@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+import { createServer } from 'http';
 import { sequelize } from './config/database';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
@@ -10,9 +11,20 @@ import authRoutes from './routes/auth';
 import postRoutes from './routes/posts';
 import commentRoutes from './routes/comments';
 import uploadRoutes from './routes/upload';
+import userRoutes from './routes/users';
+import followRoutes from './routes/follows';
+import notificationRoutes from './routes/notifications';
+import { corsOptions } from './config/cors';
+import { initSocket } from './realtime/socket';
 
 const app = express();
+const httpServer = createServer(app);
 const PORT = process.env.PORT || 3001;
+
+// Trust proxy - Required for Render, Heroku, etc
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
 
 // Rate limiting
 const limiter = rateLimit({
@@ -24,10 +36,7 @@ const limiter = rateLimit({
 // Middleware
 app.use(helmet());
 app.use(compression());
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
-}));
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api/', limiter);
@@ -46,6 +55,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/follows', followRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Error handling middleware
 app.use(notFoundHandler);
@@ -57,12 +69,27 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log('✅ Database connection established successfully');
     
+    // Run migrations automatically in production (for free plans without pre-deploy hooks)
+    if (process.env.NODE_ENV === 'production') {
+      console.log('🔄 Running database migrations...');
+      const { execSync } = require('child_process');
+      try {
+        execSync('npm run migrate', { stdio: 'inherit' });
+        console.log('✅ Migrations completed successfully');
+      } catch (migrationError) {
+        console.error('⚠️ Migration error (non-fatal):', migrationError);
+        // Continue anyway - migrations might already be applied
+      }
+    }
+    
     if (process.env.NODE_ENV !== 'production') {
-      await sequelize.sync({ force: false });
+      await sequelize.sync({ alter: true });
       console.log('📊 Database synchronized');
     }
 
-    app.listen(PORT, () => {
+    initSocket(httpServer);
+
+    httpServer.listen(PORT, () => {
       console.log(`🚀 Server is running on port ${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
     });

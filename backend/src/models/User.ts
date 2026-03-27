@@ -8,6 +8,7 @@ import {
 } from 'sequelize';
 import { sequelize } from '../config/database';
 import bcrypt from 'bcryptjs';
+import { BCRYPT_SALT_ROUNDS } from '../config/security';
 
 interface UserAttributes {
   id: number;
@@ -17,13 +18,18 @@ interface UserAttributes {
   firstName?: string;
   lastName?: string;
   avatar?: string;
+  bio?: string;
   isActive: boolean;
+  role: 'user' | 'moderator' | 'admin';
   lastLogin?: Date;
+  resetPasswordToken?: string | null;
+  resetPasswordTokenExpires?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'isActive' | 'createdAt' | 'updatedAt'> {}
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'isActive' | 'role' | 'createdAt' | 'updatedAt'> {}
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: number;
@@ -33,8 +39,12 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public firstName?: string;
   public lastName?: string;
   public avatar?: string;
+  public bio?: string;
   public isActive!: boolean;
+  public role!: 'user' | 'moderator' | 'admin';
   public lastLogin?: Date;
+  public resetPasswordToken?: string | null;
+  public resetPasswordTokenExpires?: Date | null;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -58,6 +68,8 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   public toJSON(): Omit<UserAttributes, 'password'> {
     const values = { ...this.get() } as any;
     delete values.password;
+    delete values.resetPasswordToken;
+    delete values.resetPasswordTokenExpires;
     return values;
   }
 }
@@ -75,7 +87,7 @@ User.init(
       unique: true,
       validate: {
         len: [3, 50],
-        is: /^[a-zA-Z0-9_-]+$/,
+        is: /^[a-zA-Z0-9._-]+$/,
       },
     },
     email: {
@@ -105,6 +117,10 @@ User.init(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    bio: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
     isActive: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
@@ -114,6 +130,19 @@ User.init(
       type: DataTypes.DATE,
       allowNull: true,
     },
+    resetPasswordToken: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    resetPasswordTokenExpires: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    role: {
+      type: DataTypes.ENUM('user', 'moderator', 'admin'),
+      allowNull: false,
+      defaultValue: 'user',
+    },
   },
   {
     sequelize,
@@ -121,14 +150,12 @@ User.init(
     hooks: {
       beforeCreate: async (user: User) => {
         if (user.password) {
-          const saltRounds = 12;
-          user.password = await bcrypt.hash(user.password, saltRounds);
+          user.password = await bcrypt.hash(user.password, BCRYPT_SALT_ROUNDS);
         }
       },
       beforeUpdate: async (user: User) => {
         if (user.changed('password') && user.password) {
-          const saltRounds = 12;
-          user.password = await bcrypt.hash(user.password, saltRounds);
+          user.password = await bcrypt.hash(user.password, BCRYPT_SALT_ROUNDS);
         }
       },
     },

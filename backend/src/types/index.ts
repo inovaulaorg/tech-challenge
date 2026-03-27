@@ -1,10 +1,13 @@
 import { Request } from 'express';
 
+export type UserRole = 'user' | 'moderator' | 'admin';
+
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: number;
     email: string;
     username: string;
+    role: UserRole;
   };
 }
 
@@ -19,6 +22,22 @@ export interface CreateUserRequest {
 export interface LoginRequest {
   email: string;
   password: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
 }
 
 export interface CreatePostRequest {
@@ -43,6 +62,14 @@ export interface CreateCommentRequest {
   parentId?: number;
 }
 
+export interface ModerationActionRequest {
+  reason?: string;
+}
+
+export interface FlagCommentRequest {
+  reason?: string;
+}
+
 export interface PaginationQuery {
   page?: string;
   limit?: string;
@@ -60,6 +87,7 @@ export interface JWTPayload {
   id: number;
   email: string;
   username: string;
+  role: UserRole;
   iat: number;
   exp: number;
 }
